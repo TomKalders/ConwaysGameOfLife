@@ -3,9 +3,13 @@ A c++ version of Conway's Game Of Life.
 
 # About
 This is Conway's Game Of Life using cellular automata.
+The Game of life is based on 3 basic conditions.
+for each cell in the grid, you check if that cell is alive.
+If the cell is alive, it will die if it either has less than 2 or more than 3 neighbours.
+If the cell is dead and has exactly 3 neighbours, the cell will become alive.
 
-SDL2 is used for creating and drawing to a window, as well as capturing input.
-I build it up from an empty c++ project. 
+For creating and drawing on the screen I used SDL2, as well as for capturing input from the keyboard and mouse.
+I made a small framework using the basic game loop. Where I handle input, update the scene and render it to the screen.
 
 # Controls
 - Spacebar: start/stop simulating
