@@ -2,16 +2,17 @@
 A c++ version of Conway's Game Of Life.
 
 # About
-This is Conway's Game Of Life.\n
+This is Conway's Game Of Life.
 The Game of life is basic concept of cellular automata. It's a grid of cell's where a cell is either dead or alive.
 The cells live depends on 3 basic conditions:
 - If the cell is alive and has less than 2 neighbouts, it dies.
 - If the cell is alive and it has more than 3 neighbours, it dies.
 - If the cell is dead and it has exactly 3 neighbours, it becomes alive.
 
+![Glider Cannon Example](/images/animation.jpg)
 
 # Libraries
-For creating and drawing on the screen I used SDL2, as well as for capturing input from the keyboard and mouse.
+For creating and drawing on the screen and for capturing input from mouse and keyboard, I used SDL2.
 I made a small framework using the basic game loop. Where I handle input, update the scene and render it to the screen.
 
 # Controls
