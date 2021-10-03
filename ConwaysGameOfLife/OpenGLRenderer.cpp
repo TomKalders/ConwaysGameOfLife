@@ -21,14 +21,14 @@ void OpenGLRenderer::Initialize(Grid* grid)
 {
     m_pGrid = grid;
 
-    /* Initialize the library */
+    //Initialize the library
     if (!glfwInit())
     {
         std::cout << "Failed to initialize OpenGl" << std::endl;
         return;
     }
 
-    /* Create a windowed mode window and its OpenGL context */
+    //Create a windowed mode window and its OpenGL context
     m_Window = glfwCreateWindow(m_Width, m_Height, m_WindowName.c_str() , NULL, NULL);
     if (!m_Window)
     {
@@ -37,22 +37,25 @@ void OpenGLRenderer::Initialize(Grid* grid)
         return;
     }
 
-    /* Make the window's context current */
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glViewport(0, 0, m_Width, m_Height);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    //glMatrixMode(GL_PROJECTION);
+    //glLoadIdentity();
+    //glViewport(0, 0, m_Width, m_Height);
+    //glMatrixMode(GL_MODELVIEW);
+    //glLoadIdentity();
 
+    //Make the window's context current
     glfwMakeContextCurrent(m_Window);
 }
 
 void OpenGLRenderer::Render() const
 {
+    //Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
 
+    //Draw the grid
     Draw();
 
+    //Swap the buffers and handle input events
     glfwSwapBuffers(m_Window);
     glfwPollEvents();
 
@@ -88,11 +91,14 @@ void OpenGLRenderer::Draw() const
         {
             float x1, x2;
             float y1, y2;
+			//Convert the spositions from x = [0, screenwidth] & y = [0, screenheight]
+			//to x & y = [-1 & 1]
             x1 = ConvertToDeviceCoordinates(int(cell.position.x * cell.size), m_Width);
             x2 = ConvertToDeviceCoordinates(int(cell.position.x * cell.size + cell.size), m_Width);
             y1 = ConvertToDeviceCoordinates(int(cell.position.y * cell.size), m_Height);
             y2 = ConvertToDeviceCoordinates(int(cell.position.y * cell.size + cell.size), m_Height);
 
+			//Fill the cell if it's alive, otherwhise draw the outline.
             if (cell.alive)
                 glBegin(GL_QUADS);
             else
@@ -110,5 +116,6 @@ void OpenGLRenderer::Draw() const
 
 float OpenGLRenderer::ConvertToDeviceCoordinates(int screenSpace, int width) const
 {
+    //[0, screenwidth/screenheight] range -> [0, 1] range -> [-1, 1] range
     return - (1 - (2 * (screenSpace / float(width))));
 }

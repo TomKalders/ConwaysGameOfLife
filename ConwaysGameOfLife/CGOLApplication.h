@@ -10,7 +10,7 @@ struct GLFWwindow;
 class CGOLApplication final
 {
 public:
-	CGOLApplication(Renderer* renderer);
+	CGOLApplication(Renderer* renderer, int cellSize);
 	CGOLApplication(const CGOLApplication& other) = delete;
 	CGOLApplication(CGOLApplication&& other) = delete;
 	CGOLApplication& operator=(const CGOLApplication& other) = delete;
@@ -23,6 +23,7 @@ public:
 private:
 	Grid* m_pGrid;
 	Renderer* m_pRenderer;
+	int m_CellSize;
 	float m_TickDelay;
 	float m_CurrentDelay;
 	float m_TickDelayIncrease;
