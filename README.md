@@ -1,5 +1,7 @@
-# ConwaysGameOfLife
-A c++ version of Conway's Game Of Life.
+# Controls
+- Spacebar: start/stop simulating
+- Enter: show/hide the grid
+- Backspace: clear the grid
 
 # About
 This is Conway's Game Of Life.
@@ -18,11 +20,6 @@ In the picture above you have a **glider cannon** (at the top) which creates sma
 For creating and drawing on the screen and for capturing input from mouse and keyboard, I used SDL2.
 I made a small framework using the basic game loop. Where I handle input, update the scene and render it to the screen.
 I also used GLM for some basic math containers like vectors.
-
-# Controls
-- Spacebar: start/stop simulating
-- Enter: show/hide the grid
-- Backspace: clear the grid
 
 # Features I might add later
 - On screen/in console settings to choose resolution, the size of the cells, etc..
