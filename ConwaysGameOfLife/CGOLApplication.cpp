@@ -119,7 +119,7 @@ void CGOLApplication::RunSimulation()
 int CGOLApplication::GetNrOfAliveNeighbours(const std::vector<Cell>& grid, int index, int gridWidth, int gridHeight)
 {
 	int neighbourCount = 0;
-	int totalCells = grid.size();
+	int totalCells = int(grid.size());
 
 	//Indices for the top, bottom, left and right neighbouring cells
 	int idxLeft = index - 1;
