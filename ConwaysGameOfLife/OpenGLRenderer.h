@@ -21,12 +21,14 @@ public:
 	int GetWindowWidth() const override;
 	int GetWindowHeight() const override;
 
+	void ToggleGrid() override;
 private:
 	Grid* m_pGrid;
 	GLFWwindow* m_Window;
 	const std::string m_WindowName;
 	int m_Width;
 	int m_Height;
+	bool m_DrawGrid;
 
 	void Draw() const;
 	float ConvertToDeviceCoordinates(int screenSpace, int width) const;

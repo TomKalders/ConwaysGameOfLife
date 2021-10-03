@@ -13,6 +13,7 @@ OpenGLRenderer::OpenGLRenderer(const std::string& windowName, int width, int hei
 	, m_WindowName(windowName)
 	, m_Width(width)
 	, m_Height(height)
+	, m_DrawGrid(true)
 {
 }
 
@@ -72,6 +73,11 @@ int OpenGLRenderer::GetWindowWidth() const
 int OpenGLRenderer::GetWindowHeight() const
 {
     return m_Height;
+}
+
+void OpenGLRenderer::ToggleGrid()
+{
+    m_DrawGrid = !m_DrawGrid;
 }
 
 void OpenGLRenderer::Draw() const

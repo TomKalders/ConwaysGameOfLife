@@ -17,6 +17,8 @@ public:
 
 	virtual int GetWindowWidth() const = 0;
 	virtual int GetWindowHeight() const = 0;
+
+	virtual void ToggleGrid() = 0;
 private:
 };
 
