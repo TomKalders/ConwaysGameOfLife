@@ -23,5 +23,5 @@ I also used GLM for some basic math containers like vectors.
 
 # Features I might add later
 - On screen/in console settings to choose resolution, the size of the cells, etc..
-- Loading/saving data to a file so you can load previously made scenes or save scenes you made
-
+- Loading/saving data to a file so you can load previously made scenes or save scenes you made.
+- Add a system for custom conditions.
