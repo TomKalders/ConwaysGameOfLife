@@ -6,7 +6,7 @@
 # About
 This is Conway's Game Of Life.
 The Game of life is basic concept of cellular automata. It's a grid of cell's where a cell is either dead or alive.
-The cells live depends on 3 basic conditions:
+The cell's life depends on 3 basic conditions:
 - If the cell is alive and has less than 2 neighbouts, it dies.
 - If the cell is alive and it has more than 3 neighbours, it dies.
 - If the cell is dead and it has exactly 3 neighbours, it becomes alive.
