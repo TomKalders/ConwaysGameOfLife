@@ -1,5 +1,6 @@
 #include "SDL2Renderer.h"
 #include "SDL.h"
+
 #include <algorithm>
 #include <iostream>
 

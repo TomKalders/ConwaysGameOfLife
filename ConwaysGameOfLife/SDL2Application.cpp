@@ -1,16 +1,14 @@
-#include "CGOLApplication.h"
-#include "Renderer.h"
+#include "SDL2Application.h"
+#include "SDL2Renderer.h"
 #include "SDL.h"
 
 #include <iostream>
 #include <algorithm>
 #include <chrono>
 
-bool CGOLApplication::m_IsRunning = true;
-
-CGOLApplication::CGOLApplication(Renderer* renderer, int cellSize = 20)
-	: m_pGrid(nullptr)
-	, m_pRenderer(renderer)
+SDL2Application::SDL2Application(int cellSize = 20)
+	: Application(new SDL2Renderer{ "Conway's Game of Life", 1280, 960 })
+	, m_pGrid(nullptr)
 	, m_CellSize(cellSize)
 	, m_TickDelay(0.3f)
 	, m_TickDelayIncrease(0.05f)
@@ -19,51 +17,26 @@ CGOLApplication::CGOLApplication(Renderer* renderer, int cellSize = 20)
 {
 }
 
-void CGOLApplication::Run()
-{
-	Initialize();
-
-	//store the time from the last frame
-	auto timeLastFrame = std::chrono::high_resolution_clock::now();
-	while (m_IsRunning)
-	{
-		//Get the difference in seconds between now and the last frame
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		float deltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
-
-		//Basic game loop
-		//Handle Input -> Update -> Render
-		HandleInput();
-		Update(deltaTime);
-		m_pRenderer->Render();
-
-		timeLastFrame = currentTime;
-	}
-
-	//Cleanup all the resources
-	Cleanup();
-}
-
-void CGOLApplication::SetTickDelay(float seconds)
+void SDL2Application::SetTickDelay(float seconds)
 {
 	m_TickDelay = abs(seconds);
 }
 
-void CGOLApplication::Initialize()
+void SDL2Application::Initialize()
 {
 	//Create a new grid where the grid full covers the screen with cells
 	m_pGrid = new Grid{ m_pRenderer->GetWindowWidth() / m_CellSize, m_pRenderer->GetWindowHeight() / m_CellSize, m_CellSize };
 	m_pRenderer->Initialize(m_pGrid);
 }
 
-void CGOLApplication::Cleanup()
+void SDL2Application::Cleanup()
 {
 	m_pRenderer->Cleanup();
 	delete m_pRenderer;
 	delete m_pGrid;
 }
 
-void CGOLApplication::ClickedOnCell(const glm::ivec2& position)
+void SDL2Application::ClickedOnCell(const glm::ivec2& position)
 {
 	int cellSize = m_pGrid->GetCellSize();
 
@@ -81,7 +54,7 @@ void CGOLApplication::ClickedOnCell(const glm::ivec2& position)
 	m_pGrid->ToggleCell(x / cellSize, y / cellSize);
 }
 
-void CGOLApplication::RunSimulation()
+void SDL2Application::RunSimulation()
 {
 	//Get the current state of the grid
 	std::vector<Cell> currentGrid = m_pGrid->GetCellsCopy();
@@ -116,7 +89,7 @@ void CGOLApplication::RunSimulation()
 	);
 }
 
-int CGOLApplication::GetNrOfAliveNeighbours(const std::vector<Cell>& grid, int index, int gridWidth, int gridHeight)
+int SDL2Application::GetNrOfAliveNeighbours(const std::vector<Cell>& grid, int index, int gridWidth, int gridHeight)
 {
 	int neighbourCount = 0;
 	int totalCells = int(grid.size());
@@ -161,17 +134,17 @@ int CGOLApplication::GetNrOfAliveNeighbours(const std::vector<Cell>& grid, int i
 	return neighbourCount;
 }
 
-bool CGOLApplication::OnSameRow(int idx1, int idx2, int height)
+bool SDL2Application::OnSameRow(int idx1, int idx2, int height)
 {
 	return (idx1 % height == idx2 % height);
 }
 
-void CGOLApplication::ToggleRunningSimulation()
+void SDL2Application::ToggleRunningSimulation()
 {
 	m_RunningSimulation = !m_RunningSimulation;
 }
 
-void CGOLApplication::IncreaseTickDelay(float delay)
+void SDL2Application::IncreaseTickDelay(float delay)
 {
 	float lowCap = 0.05f;
 	float highCap = 1.f;
@@ -185,12 +158,12 @@ void CGOLApplication::IncreaseTickDelay(float delay)
 }
 
 
-bool CGOLApplication::ValidIndex(int idx, int arraySize)
+bool SDL2Application::ValidIndex(int idx, int arraySize)
 {
 	return (idx > 0 && idx < arraySize - 1);
 }
 
-void CGOLApplication::HandleInput()
+void SDL2Application::HandleInput()
 {
 	SDL_Event e;
 	while (SDL_PollEvent(&e))
@@ -237,18 +210,13 @@ void CGOLApplication::HandleInput()
 
 		case SDL_QUIT:
 			//If the close button on the window is hit, exit the application
-			CGOLApplication::QuitApplication();
+			SDL2Application::QuitApplication();
 			break;
 		}
 	}
 }
 
-void CGOLApplication::QuitApplication()
-{
-	m_IsRunning = false;
-}
-
-void CGOLApplication::Update(float deltaTime)
+void SDL2Application::Update(float deltaTime)
 {
 	//If the simulation is running, check if this frame the grid should update.
 	if (m_RunningSimulation)

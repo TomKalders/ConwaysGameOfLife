@@ -1,23 +1,35 @@
+#include <windows.h>
 #include <iostream>
 #include <vld.h>
 
-#include "CGOLApplication.h"
-#include "SDL2Renderer.h"
+#include "SDL2Application.h"
 
-int main()
+void CreateApplication();
+
+int wmain()
 {
-    //Spacebar:     start/stop simulation
-    //Enter:        show/hide the grid
-    //Backspace:    clear the grid
-    
-    //Create a renderer to create a window and draw the grid
-    Renderer* pRenderer = new SDL2Renderer{ "Conway's Game Of Life", 1280, 960 };
+    wWinMain(GetModuleHandle(0), 0, 0, SW_SHOW);
+}
 
-    //Create an application, you can give it the size of a cell
-    CGOLApplication app{ pRenderer, 15 };
+//Keep reference for parameter names
+//int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
+{
+	CreateApplication();
+	return 0;
+}
 
-    //Run the application
-    app.Run();
+void CreateApplication()
+{
+	//Spacebar:     start/stop simulation
+	//Enter:        show/hide the grid
+	//Backspace:    clear the grid
 
-    return 0;
+	//Create an application, you can give it the size of a cell
+	Application* app{ new SDL2Application{15} };
+
+	//Run the application
+	app->Run();
+
+	delete app;
 }

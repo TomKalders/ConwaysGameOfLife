@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "GLFW/glfw3.h"
-#include "CGOLApplication.h"
+#include "SDL2Application.h"
 
 OpenGLRenderer::OpenGLRenderer(const std::string& windowName, int width, int height)
 	: Renderer()
@@ -60,7 +60,7 @@ void OpenGLRenderer::Render() const
     glfwPollEvents();
 
     if (glfwWindowShouldClose(m_Window))
-        CGOLApplication::QuitApplication();
+        SDL2Application::QuitApplication();
 }
 
 void OpenGLRenderer::Cleanup()

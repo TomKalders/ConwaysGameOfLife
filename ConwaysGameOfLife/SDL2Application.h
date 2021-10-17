@@ -2,27 +2,28 @@
 #include "glm.hpp"
 #include <vector>
 #include "Cell.h"
+#include "Application.h"
 
 class Renderer;
 class Grid;
 struct GLFWwindow;
 
-class CGOLApplication final
+class SDL2Application final : public Application
 {
 public:
-	CGOLApplication(Renderer* renderer, int cellSize);
-	CGOLApplication(const CGOLApplication& other) = delete;
-	CGOLApplication(CGOLApplication&& other) = delete;
-	CGOLApplication& operator=(const CGOLApplication& other) = delete;
-	CGOLApplication& operator=(CGOLApplication&& other) = delete;
+	SDL2Application(int cellSize);
+	SDL2Application(const SDL2Application& other) = delete;
+	SDL2Application(SDL2Application&& other) = delete;
+	SDL2Application& operator=(const SDL2Application& other) = delete;
+	SDL2Application& operator=(SDL2Application&& other) = delete;
+	virtual ~SDL2Application() = default;
 
-	void Run();
+	//virtual void Run() override;
 	void SetTickDelay(float seconds);
-	static void QuitApplication();
 
 private:
 	Grid* m_pGrid;
-	Renderer* m_pRenderer;
+	//Renderer* m_pRenderer;
 	int m_CellSize;
 	float m_TickDelay;
 	float m_CurrentDelay;
@@ -30,10 +31,10 @@ private:
 	bool m_RunningSimulation;
 	static bool m_IsRunning;
 
-	void Initialize();
-	void HandleInput();
-	void Update(float deltaTime);
-	void Cleanup();
+	virtual void Initialize() override;
+	virtual void HandleInput() override;
+	virtual void Update(float deltaTime) override;
+	virtual void Cleanup() override;
 
 	void ClickedOnCell(const glm::ivec2& position);
 	void RunSimulation();
