@@ -1,6 +1,8 @@
 #include "Application.h"
 #include "Renderer.h"
-#include "chrono"
+
+#include <chrono>
+#include <iostream>
 
 bool Application::m_IsRunning = true;
 
@@ -11,23 +13,41 @@ Application::Application(Renderer* m_pRenderer)
 
 void Application::Run()
 {
-	Initialize();
-
-	//store the time from the last frame
-	auto timeLastFrame = std::chrono::high_resolution_clock::now();
-	while (m_IsRunning)
+	try
 	{
-		//Get the difference in seconds between now and the last frame
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		float deltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
+		bool result = Initialize();
 
-		//Basic game loop
-		//Handle Input -> Update -> Render
-		HandleInput();
-		Update(deltaTime);
-		m_pRenderer->Render();
+		//store the time from the last frame
+		auto timeLastFrame = std::chrono::high_resolution_clock::now();
+		while (m_IsRunning && result)
+		{
+			//Get the difference in seconds between now and the last frame
+			auto currentTime = std::chrono::high_resolution_clock::now();
+			float deltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
 
-		timeLastFrame = currentTime;
+			//Basic game loop
+			//Handle Input -> Update -> Render
+			HandleInput();
+			Update(deltaTime);
+			m_pRenderer->Render();
+
+			timeLastFrame = currentTime;
+		}
+
+		if (!result)
+		{
+			throw std::exception("Application failed to initialize");
+		}
+	}
+	catch (std::exception exception)
+	{
+		std::cout << exception.what() << std::endl;
+		Cleanup();
+	}
+	catch (...)
+	{
+		std::cout << "An unknown execption has been caught in Application\n";
+		Cleanup();
 	}
 
 	//Cleanup all the resources

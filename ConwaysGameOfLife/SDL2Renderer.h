@@ -16,11 +16,11 @@ public:
 	SDL2Renderer& operator=(const SDL2Renderer & other) = delete;
 	SDL2Renderer& operator=(SDL2Renderer && other) = delete;
 
-	void Initialize(Grid* grid) override;
-	void Render() const override;
-	void Cleanup() override;
-	int GetWindowWidth() const override;
-	int GetWindowHeight() const override;
+	virtual bool Initialize(Grid* grid) override;
+	virtual void Render() const override;
+	virtual void Cleanup() override;
+	virtual int GetWindowWidth() const override;
+	virtual int GetWindowHeight() const override;
 
 	void ToggleGrid() override;
 private:

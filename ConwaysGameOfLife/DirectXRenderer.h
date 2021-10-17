@@ -13,14 +13,22 @@ public:
 	DirectXRenderer& operator=(const DirectXRenderer & other) = delete;
 	DirectXRenderer& operator=(DirectXRenderer && other) = delete;
 	virtual ~DirectXRenderer() = default;
-	void Initialize(Grid* grid) override;
-	void Render() const override;
-	void Cleanup() override;
-	int GetWindowWidth() const override;
-	int GetWindowHeight() const override;
-	void ToggleGrid() override;
+	virtual bool Initialize(Grid* grid) override;
+	virtual void Render() const override;
+	virtual void Cleanup() override;
+	virtual int GetWindowWidth() const override;
+	virtual int GetWindowHeight() const override;
+	virtual void ToggleGrid() override;
 
 private:
-	HINSTANCE m_HInstance = NULL;
+	HWND m_Handle = NULL;
+	HINSTANCE m_Instance = NULL;
+	std::string m_WindowTitle;
+	std::wstring m_WindowTitleWide;
+	std::wstring m_ClassTitle;
+	int m_Width;
+	int m_Height;
+
+	void RegisterWindowClass();
 };
 

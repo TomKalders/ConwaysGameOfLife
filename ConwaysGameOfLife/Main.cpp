@@ -3,8 +3,9 @@
 #include <vld.h>
 
 #include "SDL2Application.h"
+#include "DirectXApplication.h"
 
-void CreateApplication();
+void CreateApplication(HINSTANCE hInstance);
 
 int wmain()
 {
@@ -13,13 +14,13 @@ int wmain()
 
 //Keep reference for parameter names
 //int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
-int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
-	CreateApplication();
+	CreateApplication(hInstance);
 	return 0;
 }
 
-void CreateApplication()
+void CreateApplication(HINSTANCE)
 {
 	//Spacebar:     start/stop simulation
 	//Enter:        show/hide the grid
@@ -27,7 +28,8 @@ void CreateApplication()
 
 	//Create an application, you can give it the size of a cell
 	Application* app{ new SDL2Application{15} };
-
+	//Application* app{ new DirectXApplication{hInstance} };
+	
 	//Run the application
 	app->Run();
 

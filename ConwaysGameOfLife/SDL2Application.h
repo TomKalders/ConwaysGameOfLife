@@ -18,12 +18,10 @@ public:
 	SDL2Application& operator=(SDL2Application&& other) = delete;
 	virtual ~SDL2Application() = default;
 
-	//virtual void Run() override;
 	void SetTickDelay(float seconds);
 
 private:
 	Grid* m_pGrid;
-	//Renderer* m_pRenderer;
 	int m_CellSize;
 	float m_TickDelay;
 	float m_CurrentDelay;
@@ -31,7 +29,7 @@ private:
 	bool m_RunningSimulation;
 	static bool m_IsRunning;
 
-	virtual void Initialize() override;
+	virtual bool Initialize() override;
 	virtual void HandleInput() override;
 	virtual void Update(float deltaTime) override;
 	virtual void Cleanup() override;

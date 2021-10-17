@@ -16,7 +16,7 @@ public:
 	static void QuitApplication();
 
 private:
-	virtual void Initialize() = 0;
+	virtual bool Initialize() = 0;
 	virtual void HandleInput() = 0;
 	virtual void Update(float deltaTime) = 0;
 	virtual void Cleanup() = 0;

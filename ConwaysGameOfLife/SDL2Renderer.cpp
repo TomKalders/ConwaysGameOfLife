@@ -15,7 +15,7 @@ SDL2Renderer::SDL2Renderer(const std::string& windowName, int width, int height)
 {
 }
 
-void SDL2Renderer::Initialize(Grid* grid)
+bool SDL2Renderer::Initialize(Grid* grid)
 {
 	//Initiliaze SDL & create a window and renderer
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -24,6 +24,8 @@ void SDL2Renderer::Initialize(Grid* grid)
 
 	//Store the grid to draw later.
 	m_pGrid = grid;
+
+	return true;
 }
 
 void SDL2Renderer::Render() const
@@ -61,6 +63,9 @@ void SDL2Renderer::ToggleGrid()
 
 void SDL2Renderer::Draw() const
 {
+	if (!m_pGrid)
+		return;
+
 	const std::vector<Cell>& cells = m_pGrid->GetCells();
 
 	//Store the original color and set the draw color to white

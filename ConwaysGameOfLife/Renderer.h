@@ -11,7 +11,7 @@ public:
 	Renderer& operator=(const Renderer& other) = delete;
 	Renderer& operator=(Renderer&& other) = delete;
 
-	virtual void Initialize(Grid* grid) = 0;
+	virtual bool Initialize(Grid* grid) = 0;
 	virtual void Render() const = 0;
 	virtual void Cleanup() = 0;
 

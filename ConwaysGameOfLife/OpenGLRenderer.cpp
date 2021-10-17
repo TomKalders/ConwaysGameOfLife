@@ -17,7 +17,7 @@ OpenGLRenderer::OpenGLRenderer(const std::string& windowName, int width, int hei
 {
 }
 
-void OpenGLRenderer::Initialize(Grid* grid)
+bool OpenGLRenderer::Initialize(Grid* grid)
 {
     m_pGrid = grid;
 
@@ -25,7 +25,7 @@ void OpenGLRenderer::Initialize(Grid* grid)
     if (!glfwInit())
     {
         std::cout << "Failed to initialize OpenGl" << std::endl;
-        return;
+        return false;
     }
 
     //Create a windowed mode window and its OpenGL context
@@ -34,7 +34,7 @@ void OpenGLRenderer::Initialize(Grid* grid)
     {
         glfwTerminate();
         std::cout << "Failed to initialize OpenGl" << std::endl;
-        return;
+        return false;
     }
 
     //glMatrixMode(GL_PROJECTION);
@@ -45,6 +45,8 @@ void OpenGLRenderer::Initialize(Grid* grid)
 
     //Make the window's context current
     glfwMakeContextCurrent(m_Window);
+
+    return true;
 }
 
 void OpenGLRenderer::Render() const

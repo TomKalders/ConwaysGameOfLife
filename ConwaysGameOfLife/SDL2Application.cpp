@@ -22,11 +22,13 @@ void SDL2Application::SetTickDelay(float seconds)
 	m_TickDelay = abs(seconds);
 }
 
-void SDL2Application::Initialize()
+bool SDL2Application::Initialize()
 {
 	//Create a new grid where the grid full covers the screen with cells
 	m_pGrid = new Grid{ m_pRenderer->GetWindowWidth() / m_CellSize, m_pRenderer->GetWindowHeight() / m_CellSize, m_CellSize };
 	m_pRenderer->Initialize(m_pGrid);
+
+	return true;
 }
 
 void SDL2Application::Cleanup()
