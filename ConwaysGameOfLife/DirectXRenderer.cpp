@@ -144,24 +144,52 @@ void DirectXRenderer::ToggleGrid()
 
 HWND DirectXRenderer::GetHandle()
 {
-    return m_Handle;
+	return m_Handle;
 }
 
-void DirectXRenderer::RegisterWindowClass()
-{
-	WNDCLASSEX wc{0};
-	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-	wc.lpfnWndProc = DefWindowProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = m_Instance;
-	wc.hIcon = NULL;
-	wc.hIconSm = NULL;
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = NULL;
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = m_WindowTitleWide.c_str();
-	wc.cbSize = sizeof(WNDCLASSEX);
-
-	RegisterClassEx(&wc);
-}
+//LRESULT DirectXRenderer::WindowProcedure(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+//{
+//    switch (uMsg)
+//    {
+//    case WM_CLOSE:
+//    {
+//        HMENU hMenu;
+//        hMenu = GetMenu(hWnd);
+//        if (hMenu != NULL)
+//        {
+//            DestroyMenu(hMenu);
+//        }
+//        DestroyWindow(hWnd);
+//        UnregisterClass(
+//            m_windowClassName.c_str(),
+//            m_hInstance
+//        );
+//        return 0;
+//    }
+//
+//    case WM_DESTROY:
+//        PostQuitMessage(0);
+//        break;
+//    }
+//
+//    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+//}
+//
+//void DirectXRenderer::RegisterWindowClass()
+//{
+//	WNDCLASSEX wc{0};
+//	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+//	wc.lpfnWndProc = DefWindowProc;
+//	wc.cbClsExtra = 0;
+//	wc.cbWndExtra = 0;
+//	wc.hInstance = m_Instance;
+//	wc.hIcon = NULL;
+//	wc.hIconSm = NULL;
+//	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+//	wc.hbrBackground = NULL;
+//	wc.lpszMenuName = NULL;
+//	wc.lpszClassName = m_WindowTitleWide.c_str();
+//	wc.cbSize = sizeof(WNDCLASSEX);
+//
+//	RegisterClassEx(&wc);
+//}

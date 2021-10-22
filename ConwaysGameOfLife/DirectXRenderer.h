@@ -34,6 +34,7 @@ private:
 	int m_Width;
 	int m_Height;
 
+	//static LRESULT CALLBKACK WindowProcedure(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	void RegisterWindowClass();
 };
 

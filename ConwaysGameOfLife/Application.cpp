@@ -42,12 +42,12 @@ void Application::Run()
 	catch (std::exception exception)
 	{
 		std::cout << exception.what() << std::endl;
-		Cleanup();
+		//Cleanup();
 	}
 	catch (...)
 	{
 		std::cout << "An unknown execption has been caught in Application\n";
-		Cleanup();
+		//Cleanup();
 	}
 
 	//Cleanup all the resources
