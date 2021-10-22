@@ -20,9 +20,14 @@ public:
 	virtual int GetWindowHeight() const override;
 	virtual void ToggleGrid() override;
 
+	HWND GetHandle();
+
 private:
 	HWND m_Handle = NULL;
+	HMENU m_Menu = NULL;
 	HINSTANCE m_Instance = NULL;
+	RECT m_Rect;
+	
 	std::string m_WindowTitle;
 	std::wstring m_WindowTitleWide;
 	std::wstring m_ClassTitle;

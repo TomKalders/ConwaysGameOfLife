@@ -12,7 +12,7 @@ public:
 	Application& operator=(Application&& other) = delete;
 	virtual ~Application() = default;
 
-	void Run();
+	virtual void Run();
 	static void QuitApplication();
 
 private:
