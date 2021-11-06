@@ -20,5 +20,7 @@ private:
 	virtual void HandleInput() override;
 	virtual void Update(float deltaTime) override;
 	virtual void Cleanup() override;
+
+	DirectXRenderer* m_pDirectXRenderer = nullptr;
 };
 

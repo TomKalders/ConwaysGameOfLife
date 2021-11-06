@@ -15,6 +15,8 @@ public:
 	virtual void Run();
 	static void QuitApplication();
 
+
+
 private:
 	virtual bool Initialize() = 0;
 	virtual void HandleInput() = 0;
@@ -23,6 +25,7 @@ private:
 
 protected:
 	static bool m_IsRunning;
+	float m_DeltaTime;
 	Renderer* m_pRenderer = nullptr;
 };
 

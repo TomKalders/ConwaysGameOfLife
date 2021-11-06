@@ -8,6 +8,7 @@ bool Application::m_IsRunning = true;
 
 Application::Application(Renderer* m_pRenderer)
 	: m_pRenderer(m_pRenderer)
+	, m_DeltaTime(0.f)
 {
 }
 
@@ -23,12 +24,12 @@ void Application::Run()
 		{
 			//Get the difference in seconds between now and the last frame
 			auto currentTime = std::chrono::high_resolution_clock::now();
-			float deltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
+			m_DeltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
 
 			//Basic game loop
 			//Handle Input -> Update -> Render
 			HandleInput();
-			Update(deltaTime);
+			Update(m_DeltaTime);
 			m_pRenderer->Render();
 
 			timeLastFrame = currentTime;

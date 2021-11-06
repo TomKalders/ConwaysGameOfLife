@@ -1,16 +1,22 @@
 #include "DirectXRenderer.h"
+#include "Mesh.h"
 
 #include <memory>
 #include <iostream>
+
+#pragma warning(push)
+#pragma warning(disable:4616)
+#pragma warning(disable:4201)
+#include <gtc/type_ptr.hpp>
+#pragma warning(pop)
 
 HINSTANCE DirectXRenderer::m_Instance = NULL;
 std::wstring DirectXRenderer::m_ClassTitle = L"DefaultClass";
 
 DirectXRenderer::DirectXRenderer(HINSTANCE hInstance, const std::string& windowName, int width, int height)
-	//: m_Instance(hInstance)
-	: m_WindowTitle(windowName)
+	: m_pCamera(new PerspectiveCamera{{0, 0, 10}, {0, 0, 1}, float(width)/float(height)})
+	, m_WindowTitle(windowName)
 	, m_WindowTitleWide(std::wstring{windowName.begin(), windowName.end()})
-	//, m_ClassTitle(L"MainWindowClass")
 	, m_Width(width)
 	, m_Height(height)
 {
@@ -32,13 +38,93 @@ bool DirectXRenderer::Initialize(Grid*)
 
 void DirectXRenderer::Render() const
 {
+    if (!m_pDeviceContext && !m_pSwapChain)
+        return;
+
     //Clear buffer
     glm::vec3 clearColor{ 0.2f, 0.2f, 0.6f };
     m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, &clearColor.r);
     m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
 
+    //m_pCamera->Translate({ m_pCamera->GetPosition().x + 100, 0, 0 });
+    //m_pCamera->RotateYaw(10);
+    m_pCamera->Translate({ 0.1f, 0, 0 });
+
     //Render
 	//...
+    const static std::vector<Vertex_Input> vertices =
+    {
+        //Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+        //Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+        //Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+        //Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+        //                                                   
+        //Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+        //Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+        //Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
+        //Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+        //                                                   
+        //Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+        //Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+        //Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
+        //Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+        //                                                   
+        //Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+        //Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+        //Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+        //Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+        //                                                   
+        //Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+        //Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+        //Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+        //Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+        //                                                   
+        //Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+        //Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+        //Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+        //Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}}
+
+         Vertex_Input{{-1, -1, -1},  /*{0, 0, 1} , */{145, 145, 145} },
+         Vertex_Input{{1, -1, -1} ,  /*{1, 0, 0} , */{145, 145, 145} },
+         Vertex_Input{{1, 1, -1}  ,  /*{0, 0, -1}, */{145, 145, 145} },
+         Vertex_Input{{-1, 1, -1} ,  /*{-1, 0, 0}, */{145, 145, 145} },
+         Vertex_Input{{-1, -1, 1} ,  /*{0, 1, 0} , */{145, 145, 145} },
+         Vertex_Input{{1, -1, 1}  ,  /*{0, -1, 0}, */{145, 145, 145} },
+         Vertex_Input{{1, 1, 1}   ,  /*{0, 0, 1} , */{145, 145, 145} },
+         Vertex_Input{{-1, 1, 1}  ,  /*{1, 0, 0} , */{145, 145, 145} },
+    };
+
+    const static std::vector<uint32_t> indices =
+    {
+                0,1,3,
+                3,1,2,
+                4,5,7,
+                7,5,6,
+                8,9,11,
+                11,9,10,
+                12,13,15,
+                15,13,14,
+                16,17,19,
+                19,17,18,
+                20,21,23,
+                23,21,22
+    };
+
+    const glm::mat4 viewMatrix = m_pCamera->GetViewMatrix();
+    glm::mat4 inverseViewMatrix = glm::inverse(viewMatrix);
+    const glm::mat4 projectionMatrix = m_pCamera->GetProjectionMatrix();
+
+    inverseViewMatrix = glm::transpose(inverseViewMatrix);
+    float* inverseView = (float*)glm::value_ptr(inverseViewMatrix);
+    //Mesh mesh{ m_pDevice, vertices, indices };
+    Mesh mesh{ m_pDevice, "Resources/Models/Cube.obj" };
+
+    //glm::mat4 worldViewProjectionMatrix = glm::mat4{ 1.f };
+    glm::mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * mesh.GetWorldMatrix();
+    worldViewProjectionMatrix = glm::transpose(worldViewProjectionMatrix);
+    float* worldViewProjection = (float*)glm::value_ptr(worldViewProjectionMatrix);
+
+    mesh.Render(m_pDeviceContext, worldViewProjection, inverseView);
 
     //Present
     m_pSwapChain->Present(0, 0);
@@ -49,13 +135,11 @@ void DirectXRenderer::Cleanup()
     if (m_pRenderTargetView)
     {
         m_pRenderTargetView->Release();
-        //delete m_pRenderTargetView;
     }
 
     if (m_pRenderTargetBuffer)
     {
         m_pRenderTargetBuffer->Release();
-        //delete m_pRenderTargetBuffer;
     }
 
     if (m_pDepthStencilView)
@@ -65,13 +149,11 @@ void DirectXRenderer::Cleanup()
     if (m_pDepthStencilBuffer)
     {
         m_pDepthStencilBuffer->Release();
-	    
     }
 
     if (m_pSwapChain)
     {
         m_pSwapChain->Release();
-	    
     }
 
     if (m_pDeviceContext)
@@ -84,13 +166,11 @@ void DirectXRenderer::Cleanup()
     if (m_pDevice)
     {
         m_pDevice->Release();
-	    
     }
 
     if (m_pDXGIFactory)
     {
         m_pDXGIFactory->Release();
-	    
     }
 	
 	if (m_Handle != NULL)
@@ -98,6 +178,9 @@ void DirectXRenderer::Cleanup()
 		UnregisterClass(m_ClassTitle.c_str(), m_Instance);
 		DestroyWindow(m_Handle);
 	}
+
+    if (m_pCamera)
+        delete m_pCamera;
 }
 
 int DirectXRenderer::GetWindowWidth() const
@@ -114,9 +197,14 @@ void DirectXRenderer::ToggleGrid()
 {
 }
 
-HWND DirectXRenderer::GetHandle()
+HWND DirectXRenderer::GetHandle() const
 {
 	return m_Handle;
+}
+
+PerspectiveCamera* DirectXRenderer::GetCamera() const
+{
+    return m_pCamera;
 }
 
 HRESULT DirectXRenderer::InitializeDirectX()
@@ -217,6 +305,97 @@ HRESULT DirectXRenderer::InitializeDirectX()
         return HRESULT{ S_OK };
     }
 
+void DirectXRenderer::Test() const
+{
+    //const static std::vector<Vertex_Input> vertices =
+    //{
+    //    //{-0.5f,0.5f,-0.5f},
+    //    //{-0.5f,-0.5f,-0.5f},
+    //    //{0.5f,-0.5f,-0.5f},
+    //    //{0.5f,0.5f,-0.5f},
+    //    //
+    //    //{-0.5f,0.5f,0.5f},
+    //    //{-0.5f,-0.5f,0.5f},
+    //    //{0.5f,-0.5f,0.5f},
+    //    //{0.5f,0.5f,0.5f},
+    //    //
+    //    //{0.5f,0.5f,-0.5f},
+    //    //{0.5f,-0.5f,-0.5f},
+    //    //{0.5f,-0.5f,0.5f},
+    //    //{0.5f,0.5f,0.5f},
+    //    //
+    //    //{-0.5f,0.5f,-0.5f},
+    //    //{-0.5f,-0.5f,-0.5f},
+    //    //{-0.5f,-0.5f,0.5f},
+    //    //{-0.5f,0.5f,0.5f},
+    //    //
+    //    //{-0.5f,0.5f,0.5f},
+    //    //{-0.5f,0.5f,-0.5f},
+    //    //{0.5f,0.5f,-0.5f},
+    //    //{0.5f,0.5f,0.5f},
+    //    //
+    //    //{-0.5f,-0.5f,0.5f},
+    //    //{-0.5f,-0.5f,-0.5f},
+    //    //{0.5f,-0.5f,-0.5f},
+    //    //{0.5f,-0.5f,0.5f}
+    //    Vertex_Input{{100, 0, 0}, {255, 255, 255}},
+    //    Vertex_Input{{-100, 0, 0}, {255, 255, 255}},
+    //    Vertex_Input{{50, 1, 0}, {255, 255, 255}},
+    //};
+
+    //const static std::vector<uint32_t> indices =
+    //{
+    //            0,1,3,
+    //            3,1,2,
+    //            4,5,7,
+    //            7,5,6,
+    //            8,9,11,
+    //            11,9,10,
+    //            12,13,15,
+    //            15,13,14,
+    //            16,17,19,
+    //            19,17,18,
+    //            20,21,23,
+    //            23,21,22
+    //};
+
+    ////Set vertex buffer
+    //UINT stride = sizeof(Vertex_Input);
+    //UINT offset = 0;
+    //pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertexBuffer, &stride, &offset);
+
+    ////Set index buffer
+    //pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+    ////Set input layout
+    //pDeviceContext->IASetInputLayout(m_pVertexLayout);
+
+    ////Set primitive topology
+    //pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    ////Set the worldviewprojectionMatrix
+    //m_pEffect->GetWorldViewProjMatrix()->SetMatrix(worldViewProjMatrix);
+
+    ////Set the worldMatrix
+    //inverseView;
+    //glm::mat4 world = glm::transpose(m_WorldMatrix);
+    ////float* data = (float*)(world[0].x);
+    //float* data = (float*)glm::value_ptr(world);
+    //m_pEffect->GetWorldMatrix()->SetMatrix(data);
+
+    ////Set the InverseViewMatrix
+    //m_pEffect->GetViewInverseMatrix()->SetMatrix(inverseView);
+
+    ////Render triangle
+    //D3DX11_TECHNIQUE_DESC techDesc;
+    //m_pEffect->GetTechnique()->GetDesc(&techDesc);
+    //for (UINT p = 0; p < techDesc.Passes; ++p)
+    //{
+    //    m_pEffect->GetTechnique()->GetPassByIndex(p)->Apply(0, pDeviceContext);
+    //    pDeviceContext->DrawIndexed(m_AmountIndices, 0, 0);
+    //}
+}
+
 HRESULT DirectXRenderer::CreateHandle()
 {
     if (m_Instance == NULL)
@@ -316,22 +495,3 @@ LRESULT CALLBACK DirectXRenderer::WindowProcedure(HWND hWnd, UINT uMsg, WPARAM w
 
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
-
-//void DirectXRenderer::RegisterWindowClass()
-//{
-//	WNDCLASSEX wc{0};
-//	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-//	wc.lpfnWndProc = DefWindowProc;
-//	wc.cbClsExtra = 0;
-//	wc.cbWndExtra = 0;
-//	wc.hInstance = m_Instance;
-//	wc.hIcon = NULL;
-//	wc.hIconSm = NULL;
-//	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-//	wc.hbrBackground = NULL;
-//	wc.lpszMenuName = NULL;
-//	wc.lpszClassName = m_WindowTitleWide.c_str();
-//	wc.cbSize = sizeof(WNDCLASSEX);
-//
-//	RegisterClassEx(&wc);
-//}

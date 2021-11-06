@@ -73,7 +73,14 @@ void CreateApplication(HINSTANCE hInstance)
 
 	
 	//Run the application
-	app->Run();
+	try
+	{
+		app->Run();
+	}
+	catch (std::exception exception)
+	{
+		std::cout << exception.what() << std::endl;
+	}
 
 	delete app;
 }
