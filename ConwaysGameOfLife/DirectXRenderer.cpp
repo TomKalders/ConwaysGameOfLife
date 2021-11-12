@@ -4,6 +4,9 @@
 #include <memory>
 #include <iostream>
 
+#include "SDL_syswm.h"
+#include "SDL_surface.h"
+
 #pragma warning(push)
 #pragma warning(disable:4616)
 #pragma warning(disable:4201)
@@ -27,7 +30,10 @@ bool DirectXRenderer::Initialize(Grid*)
 {
     //RegisterWindowClass();
 
-    if (CreateHandle() != S_OK)
+    //if (CreateHandle() != S_OK)
+    //    return false;
+
+    if (!InitializeSDLWindow())
         return false;
 
     if (InitializeDirectX() != S_OK)
@@ -48,7 +54,7 @@ void DirectXRenderer::Render() const
 
     //m_pCamera->Translate({ m_pCamera->GetPosition().x + 100, 0, 0 });
     //m_pCamera->RotateYaw(10);
-    m_pCamera->Translate({ 0.1f, 0, 0 });
+    //m_pCamera->Translate({ 0.1f, 0, 0 });
 
     //Render
 	//...
@@ -110,18 +116,20 @@ void DirectXRenderer::Render() const
                 23,21,22
     };
 
-    const glm::mat4 viewMatrix = m_pCamera->GetViewMatrix();
+    //const glm::mat4 viewMatrix = m_pCamera->GetViewMatrix();
+    const glm::mat4 viewMatrix = glm::transpose(m_pCamera->GetViewMatrix());
     glm::mat4 inverseViewMatrix = glm::inverse(viewMatrix);
-    const glm::mat4 projectionMatrix = m_pCamera->GetProjectionMatrix();
+    //const glm::mat4 projectionMatrix = m_pCamera->GetProjectionMatrix();
+    const glm::mat4 projectionMatrix = glm::transpose(m_pCamera->GetProjectionMatrix());
 
-    inverseViewMatrix = glm::transpose(inverseViewMatrix);
+    //inverseViewMatrix = glm::transpose(inverseViewMatrix);
     float* inverseView = (float*)glm::value_ptr(inverseViewMatrix);
     //Mesh mesh{ m_pDevice, vertices, indices };
     Mesh mesh{ m_pDevice, "Resources/Models/Cube.obj" };
 
     //glm::mat4 worldViewProjectionMatrix = glm::mat4{ 1.f };
-    glm::mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * mesh.GetWorldMatrix();
-    worldViewProjectionMatrix = glm::transpose(worldViewProjectionMatrix);
+    glm::mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * glm::transpose(mesh.GetWorldMatrix());
+    //worldViewProjectionMatrix = glm::transpose(worldViewProjectionMatrix);
     float* worldViewProjection = (float*)glm::value_ptr(worldViewProjectionMatrix);
 
     mesh.Render(m_pDeviceContext, worldViewProjection, inverseView);
@@ -181,6 +189,12 @@ void DirectXRenderer::Cleanup()
 
     if (m_pCamera)
         delete m_pCamera;
+
+    if (m_pWindow)
+    {
+        SDL_DestroyWindow(m_pWindow);
+		SDL_Quit();
+    }
 }
 
 int DirectXRenderer::GetWindowWidth() const
@@ -205,6 +219,19 @@ HWND DirectXRenderer::GetHandle() const
 PerspectiveCamera* DirectXRenderer::GetCamera() const
 {
     return m_pCamera;
+}
+
+bool DirectXRenderer::InitializeSDLWindow()
+{
+    SDL_Init(SDL_INIT_VIDEO);
+
+    m_pWindow = SDL_CreateWindow(
+        m_WindowTitle.c_str(),
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        m_Width, m_Height, 0);
+
+    return m_pWindow != nullptr;
 }
 
 HRESULT DirectXRenderer::InitializeDirectX()
@@ -243,10 +270,11 @@ HRESULT DirectXRenderer::InitializeDirectX()
         swapChainDesc.Flags = 0;
 
         //Get the handle HWND from the sdl backbuffer
-        //SDL_SysWMinfo sysWMInfo{};
-        //SDL_VERSION(&sysWMInfo.version);
-        //SDL_GetWindowWMInfo(m_pWindow, &sysWMInfo);
-        swapChainDesc.OutputWindow = m_Handle;
+        SDL_SysWMinfo sysWMInfo{};
+        SDL_VERSION(&sysWMInfo.version);
+        SDL_GetWindowWMInfo(m_pWindow, &sysWMInfo);
+        swapChainDesc.OutputWindow = sysWMInfo.info.win.window;
+        //swapChainDesc.OutputWindow = m_Handle;
 
         //Create swapchain and hook it into the handle of the SDL window
         result = m_pDXGIFactory->CreateSwapChain(m_pDevice, &swapChainDesc, &m_pSwapChain);

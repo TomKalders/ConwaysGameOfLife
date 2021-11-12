@@ -26,36 +26,36 @@ void DirectXApplication::Run()
     if (!IsWindowVisible(handle))
         ShowWindow(handle, SW_SHOW);
 
-    // The render loop is controlled here.
-    bool bGotMsg;
-    MSG  msg;
-    msg.message = WM_NULL;
-    PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
+    //// The render loop is controlled here.
+    //bool bGotMsg;
+    //MSG  msg;
+    //msg.message = WM_NULL;
+    //PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
 
 	//Calculate DeltaTime
     auto timeLastFrame = std::chrono::high_resolution_clock::now();
 	
-    while (WM_QUIT != msg.message && m_IsRunning)
+    while (/*WM_QUIT != msg.message &&*/ m_IsRunning)
     {
         auto currentTime = std::chrono::high_resolution_clock::now();
         m_DeltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
     	
         // Process window events.
         // Use PeekMessage() so we can use idle time to render the scene. 
-        bGotMsg = (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0);
+        //bGotMsg = (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0);
 
-        if (bGotMsg)
-        {
-            // Translate and dispatch the message
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        else
-        {
+        //if (bGotMsg)
+        //{
+        //    // Translate and dispatch the message
+        //    TranslateMessage(&msg);
+        //    DispatchMessage(&msg);
+        //}
+        //else
+        //{
             HandleInput();
             Update(m_DeltaTime);
             m_pRenderer->Render();
-        }
+        //}
 
         timeLastFrame = currentTime;
     }
@@ -97,6 +97,18 @@ void DirectXApplication::HandleInput()
     {
         glm::fvec3 rightVector{ pCamera->GetRightVector() * pCamera->GetMovementSpeed() * m_DeltaTime };
         pCamera->Translate(rightVector);
+    }
+
+    SDL_Event e;
+    while (SDL_PollEvent(&e))
+    {
+        switch (e.type)
+        {
+        case SDL_QUIT:
+            //If the close button on the window is hit, exit the application
+            DirectXApplication::QuitApplication();
+            break;
+        }
     }
 }
 

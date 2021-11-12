@@ -4,6 +4,9 @@
 
 #include <string>
 #include <windows.h>
+
+#include <SDL.h>
+
 #include <dxgi.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -38,7 +41,12 @@ private:
 	static HINSTANCE m_Instance; /*= NULL;*/
 	RECT m_Rect = RECT{};
 	//------------------
-	
+
+	//------ SDL2 ------
+	bool InitializeSDLWindow();
+	SDL_Window* m_pWindow;
+	//------------------
+
 	//----- DirectX -----
 	HRESULT InitializeDirectX();
 	ID3D11Device* m_pDevice = nullptr;
