@@ -116,19 +116,19 @@ void DirectXRenderer::Render() const
                 23,21,22
     };
 
-    //const glm::mat4 viewMatrix = m_pCamera->GetViewMatrix();
-    const glm::mat4 viewMatrix = glm::transpose(m_pCamera->GetViewMatrix());
+    const glm::mat4 viewMatrix = m_pCamera->GetViewMatrix();
+    //const glm::mat4 viewMatrix = glm::transpose(m_pCamera->GetViewMatrix());
     glm::mat4 inverseViewMatrix = glm::inverse(viewMatrix);
-    //const glm::mat4 projectionMatrix = m_pCamera->GetProjectionMatrix();
-    const glm::mat4 projectionMatrix = glm::transpose(m_pCamera->GetProjectionMatrix());
+    const glm::mat4 projectionMatrix = m_pCamera->GetProjectionMatrix();
+    //const glm::mat4 projectionMatrix = glm::transpose(m_pCamera->GetProjectionMatrix());
 
-    //inverseViewMatrix = glm::transpose(inverseViewMatrix);
+    inverseViewMatrix = glm::transpose(inverseViewMatrix);
     float* inverseView = (float*)glm::value_ptr(inverseViewMatrix);
     //Mesh mesh{ m_pDevice, vertices, indices };
     Mesh mesh{ m_pDevice, "Resources/Models/Cube.obj" };
 
     //glm::mat4 worldViewProjectionMatrix = glm::mat4{ 1.f };
-    glm::mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * glm::transpose(mesh.GetWorldMatrix());
+    glm::mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * mesh.GetWorldMatrix();
     //worldViewProjectionMatrix = glm::transpose(worldViewProjectionMatrix);
     float* worldViewProjection = (float*)glm::value_ptr(worldViewProjectionMatrix);
 

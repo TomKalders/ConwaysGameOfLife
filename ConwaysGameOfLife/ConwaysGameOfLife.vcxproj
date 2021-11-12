@@ -194,6 +194,11 @@
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="SDL2Renderer.h" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Resources\Shader\PosCol.fx">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
