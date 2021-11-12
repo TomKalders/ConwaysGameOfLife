@@ -22,25 +22,21 @@ PerspectiveCamera::PerspectiveCamera(const glm::fvec3& position, const glm::fvec
 //Getters
 glm::fvec3 PerspectiveCamera::GetPosition() const
 {
-	//return glm::fvec3{ m_LookAt(0, 3), m_LookAt(1, 3), m_LookAt(2, 3) };
 	return glm::fvec3{ m_LookAt[0].w, m_LookAt[1].w, m_LookAt[2].w };
 }
 
 glm::fvec3 PerspectiveCamera::GetForwardVector() const
 {
-	//return glm::fvec3{ m_LookAt(0, 2), m_LookAt(1, 2), m_LookAt(2, 2) };
 	return glm::fvec3{ m_LookAt[0].z, m_LookAt[1].z, m_LookAt[2].z };
 }
 
 glm::fvec3 PerspectiveCamera::GetRightVector() const
 {
-	//return glm::fvec3{ m_LookAt(0, 0), m_LookAt(1, 0), m_LookAt(2, 0) };
 	return glm::fvec3{ m_LookAt[0].x, m_LookAt[1].x, m_LookAt[2].x };
 }
 
 glm::fvec3 PerspectiveCamera::GetUpVector() const
 {
-	//return glm::fvec3{ m_LookAt(0, 1), m_LookAt(1, 1), m_LookAt(2, 1) };
 	return glm::fvec3{ m_LookAt[0].y, m_LookAt[1].y, m_LookAt[2].y };
 }
 
@@ -97,7 +93,7 @@ float PerspectiveCamera::GetNear() const
 //Setters
 void PerspectiveCamera::SetFieldOfView(float degrees)
 {
-	float angleInRadians{ glm::radians(degrees)/*degrees * float(E_TO_RADIANS)*/};
+	float angleInRadians{ glm::radians(degrees)};
 	float scaleFactor{ tanf(angleInRadians / 2.f) };
 	m_Fov = atanf(scaleFactor / m_Distance);
 
@@ -142,7 +138,6 @@ void PerspectiveCamera::SetNear(float nearPlane)
 
 void PerspectiveCamera::Translate(const glm::fvec3& translation)
 {
-	//glm::mat4 translationMatrix = MakeTranslation(translation);
 	glm::mat4 translationMatrix = glm::translate(translation);
 	m_LookAt = translationMatrix * m_LookAt;
 }
@@ -177,9 +172,6 @@ void PerspectiveCamera::RotatePitch(float angle, bool isDegrees)
 //Private Functions
 void PerspectiveCamera::SetForwardVector(const glm::fvec3& forwardVector)
 {
-	//m_LookAt(0, 2) = forwardVector.x;
-	//m_LookAt(1, 2) = forwardVector.y;
-	//m_LookAt(2, 2) = forwardVector.z;
 	m_LookAt[0].z = forwardVector.x;
 	m_LookAt[1].z = forwardVector.y;
 	m_LookAt[2].z = forwardVector.z;
@@ -196,9 +188,9 @@ void PerspectiveCamera::CalculateProjectionMatrix()
 	m_ProjectionMatrix[0].x = 1.f / (m_AspectRatio * m_Fov);
 	m_ProjectionMatrix[1].y = 1.f / m_Fov;
 	m_ProjectionMatrix[2].z = m_Far / (m_Far - m_Near);
-	m_ProjectionMatrix[3].w = 0;
-	m_ProjectionMatrix[3].z = 1;
 	m_ProjectionMatrix[2].w = -(m_Far * m_Near) / (m_Far - m_Near);
+	m_ProjectionMatrix[3].z = 1;
+	m_ProjectionMatrix[3].w = 0;
 }
 
 void PerspectiveCamera::CalculateVectors()
@@ -207,14 +199,6 @@ void PerspectiveCamera::CalculateVectors()
 
 	glm::fvec3 right = glm::normalize(glm::cross(glm::fvec3{ 0, 1, 0 }, forward));
 	glm::fvec3 up = glm::normalize(glm::cross(forward, right));
-
-	//m_LookAt(0, 0) = right.x;
-	//m_LookAt(1, 0) = right.y;
-	//m_LookAt(2, 0) = right.z;
-
-	//m_LookAt(0, 1) = up.x;
-	//m_LookAt(1, 1) = up.y;
-	//m_LookAt(2, 1) = up.z;
 
 	m_LookAt[0].x = right.x;
 	m_LookAt[1].x = right.y;

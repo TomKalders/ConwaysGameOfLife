@@ -22,40 +22,16 @@ void DirectXApplication::Run()
         throw std::exception{ "Unsupported renderer for this application" };
     }
 
-    HWND handle = m_pDirectXRenderer->GetHandle();
-    if (!IsWindowVisible(handle))
-        ShowWindow(handle, SW_SHOW);
-
-    //// The render loop is controlled here.
-    //bool bGotMsg;
-    //MSG  msg;
-    //msg.message = WM_NULL;
-    //PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
-
-	//Calculate DeltaTime
     auto timeLastFrame = std::chrono::high_resolution_clock::now();
 	
-    while (/*WM_QUIT != msg.message &&*/ m_IsRunning)
+    while (m_IsRunning)
     {
         auto currentTime = std::chrono::high_resolution_clock::now();
         m_DeltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
-    	
-        // Process window events.
-        // Use PeekMessage() so we can use idle time to render the scene. 
-        //bGotMsg = (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0);
 
-        //if (bGotMsg)
-        //{
-        //    // Translate and dispatch the message
-        //    TranslateMessage(&msg);
-        //    DispatchMessage(&msg);
-        //}
-        //else
-        //{
-            HandleInput();
-            Update(m_DeltaTime);
-            m_pRenderer->Render();
-        //}
+        HandleInput();
+        Update(m_DeltaTime);
+        m_pRenderer->Render();
 
         timeLastFrame = currentTime;
     }
@@ -65,8 +41,6 @@ void DirectXApplication::Run()
 
 bool DirectXApplication::Initialize()
 {
-    //SDL_Init(SDL_INIT_EVERYTHING);
-
 	if (!m_pRenderer->Initialize(nullptr))
 		return false;
 

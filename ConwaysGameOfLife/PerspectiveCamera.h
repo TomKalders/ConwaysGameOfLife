@@ -1,5 +1,4 @@
 #pragma once
-//#include "EMath.h"
 #include "glm.hpp"
 
 class PerspectiveCamera
@@ -38,9 +37,6 @@ public:
 	void Rotate(float angle, const glm::fvec3& axis, bool isDegrees = true);
 	void RotateYaw(float angle, bool isDegrees = true);
 	void RotatePitch(float angle, bool isDegrees = true);
-
-	//Elite::FPoint4 ProjectPointToNDC(const Elite::FPoint4& pointToProject, const glm::mat4& worldMatrix);
-	//glm::mat4 GetWorldViewProjectionMatrix(const glm::mat4& worldMatrix);
 
 private:
 	glm::mat4 m_LookAt;

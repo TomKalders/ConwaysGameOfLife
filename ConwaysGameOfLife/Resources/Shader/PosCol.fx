@@ -93,7 +93,7 @@ VS_OUTPUT VS(VS_INPUT input)
 float4 CalculateLambert(float3 normal)
 {   
     //float4 lambert = float4(1, 1, 1, 1) * (gLightIntesity * (dot(-normal, gLightDirection)));
-    float4 lambert = float4(1, 1, 1, 1) * (gLightIntesity * saturate(dot(-normal, gLightDirection)));
+    float4 lambert = float4(1, 1, 1, 1) * (gLightIntesity * dot(-normal, gLightDirection));
     return saturate(lambert);
 }
 

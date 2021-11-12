@@ -187,7 +187,7 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 			{
 				m_VertexBuffer.push_back({
 					{ vertex.Position.X, vertex.Position.Y, vertex.Position.Z },
-					{ 0.5f, 0.5f, 0.5f},
+					{ 7.f*2/255.f, 28.f*2/255.f, 51.f*2/255.f},
 					{ vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z },
 					//{ vertex.TextureCoordinate.X, vertex.TextureCoordinate.Y }
 				});
@@ -196,6 +196,30 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 			for (unsigned int index : loader.LoadedIndices)
 			{
 				m_IndexBuffer.push_back(index);
+			}
+
+			for (int i = 0; i < m_IndexBuffer.size(); i++)
+			{
+				if (i % 3 == 2)
+				{
+					std::swap(m_IndexBuffer[i - 1], m_IndexBuffer[i]);
+				}
+
+				//if (m_IndexBuffer.size() == m_VertexBuffer.size())
+				//{
+				//	switch (i % 3)
+				//	{
+				//	case 0:
+				//		m_VertexBuffer[i].color = { 1, 0, 0 };
+				//		break;
+				//	case 1:
+				//		m_VertexBuffer[i].color = { 0, 1, 0 };
+				//		break;
+				//	case 2:
+				//		m_VertexBuffer[i].color = { 0, 0, 1 };
+				//		break;
+				//	}
+				//}
 			}
 		}
 	}

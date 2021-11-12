@@ -52,52 +52,48 @@ void DirectXRenderer::Render() const
     m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, &clearColor.r);
     m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
 
-    //m_pCamera->Translate({ m_pCamera->GetPosition().x + 100, 0, 0 });
-    //m_pCamera->RotateYaw(10);
-    //m_pCamera->Translate({ 0.1f, 0, 0 });
-
     //Render
 	//...
     const static std::vector<Vertex_Input> vertices =
     {
-        //Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
-        //Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
-        //Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
-        //Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
-        //                                                   
-        //Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
-        //Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
-        //Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
-        //Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
-        //                                                   
-        //Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
-        //Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
-        //Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
-        //Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
-        //                                                   
-        //Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
-        //Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
-        //Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
-        //Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
-        //                                                   
-        //Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
-        //Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
-        //Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
-        //Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
-        //                                                   
-        //Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
-        //Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
-        //Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
-        //Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}}
+        Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+        Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+        Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+        Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+                                                           
+        Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+        Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+        Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
+        Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+                                                           
+        Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+        Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+        Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
+        Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+                                                           
+        Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+        Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+        Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+        Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+                                                           
+        Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+        Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+        Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+        Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+                                                           
+        Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+        Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+        Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+        Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}}
 
-         Vertex_Input{{-1, -1, -1},  /*{0, 0, 1} , */{145, 145, 145} },
-         Vertex_Input{{1, -1, -1} ,  /*{1, 0, 0} , */{145, 145, 145} },
-         Vertex_Input{{1, 1, -1}  ,  /*{0, 0, -1}, */{145, 145, 145} },
-         Vertex_Input{{-1, 1, -1} ,  /*{-1, 0, 0}, */{145, 145, 145} },
-         Vertex_Input{{-1, -1, 1} ,  /*{0, 1, 0} , */{145, 145, 145} },
-         Vertex_Input{{1, -1, 1}  ,  /*{0, -1, 0}, */{145, 145, 145} },
-         Vertex_Input{{1, 1, 1}   ,  /*{0, 0, 1} , */{145, 145, 145} },
-         Vertex_Input{{-1, 1, 1}  ,  /*{1, 0, 0} , */{145, 145, 145} },
+         //Vertex_Input{{-1, -1, -1},  /*{0, 0, 1} , */{145, 145, 145} },
+         //Vertex_Input{{1, -1, -1} ,  /*{1, 0, 0} , */{145, 145, 145} },
+         //Vertex_Input{{1, 1, -1}  ,  /*{0, 0, -1}, */{145, 145, 145} },
+         //Vertex_Input{{-1, 1, -1} ,  /*{-1, 0, 0}, */{145, 145, 145} },
+         //Vertex_Input{{-1, -1, 1} ,  /*{0, 1, 0} , */{145, 145, 145} },
+         //Vertex_Input{{1, -1, 1}  ,  /*{0, -1, 0}, */{145, 145, 145} },
+         //Vertex_Input{{1, 1, 1}   ,  /*{0, 0, 1} , */{145, 145, 145} },
+         //Vertex_Input{{-1, 1, 1}  ,  /*{1, 0, 0} , */{145, 145, 145} },
     };
 
     const static std::vector<uint32_t> indices =
@@ -117,19 +113,18 @@ void DirectXRenderer::Render() const
     };
 
     const glm::mat4 viewMatrix = m_pCamera->GetViewMatrix();
-    //const glm::mat4 viewMatrix = glm::transpose(m_pCamera->GetViewMatrix());
     glm::mat4 inverseViewMatrix = glm::inverse(viewMatrix);
-    const glm::mat4 projectionMatrix = m_pCamera->GetProjectionMatrix();
-    //const glm::mat4 projectionMatrix = glm::transpose(m_pCamera->GetProjectionMatrix());
+
+    //Credit to Pepijn Langeraert for finding this one
+    const glm::mat4 projectionMatrix = glm::transpose(m_pCamera->GetProjectionMatrix());
 
     inverseViewMatrix = glm::transpose(inverseViewMatrix);
     float* inverseView = (float*)glm::value_ptr(inverseViewMatrix);
     //Mesh mesh{ m_pDevice, vertices, indices };
     Mesh mesh{ m_pDevice, "Resources/Models/Cube.obj" };
 
-    //glm::mat4 worldViewProjectionMatrix = glm::mat4{ 1.f };
     glm::mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * mesh.GetWorldMatrix();
-    //worldViewProjectionMatrix = glm::transpose(worldViewProjectionMatrix);
+    worldViewProjectionMatrix = glm::transpose(worldViewProjectionMatrix);
     float* worldViewProjection = (float*)glm::value_ptr(worldViewProjectionMatrix);
 
     mesh.Render(m_pDeviceContext, worldViewProjection, inverseView);
