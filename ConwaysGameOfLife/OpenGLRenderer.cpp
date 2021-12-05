@@ -49,7 +49,7 @@ bool OpenGLRenderer::Initialize(Grid* grid)
     return true;
 }
 
-void OpenGLRenderer::Render() const
+void OpenGLRenderer::Render()
 {
     //Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);

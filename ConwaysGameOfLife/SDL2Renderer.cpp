@@ -28,7 +28,7 @@ bool SDL2Renderer::Initialize(Grid* grid)
 	return true;
 }
 
-void SDL2Renderer::Render() const
+void SDL2Renderer::Render()
 {
 	//Set the clear color
 	SDL_SetRenderDrawColor(m_Renderer, 50, 50, 50, 255);

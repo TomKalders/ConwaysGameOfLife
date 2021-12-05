@@ -10,26 +10,25 @@
 #include <gtc/type_ptr.hpp>
 #pragma warning(pop)
 
-struct float2
-{
-	float x, y;
-};
-
-struct float3
-{
-	float x, y, z;
-};
-
-struct float4
-{
-	float x, y, z, w;
-};
-
 struct Vertex_Input
 {
-	float3 position;
-	float3 color;
-	float3 normal;
+	Vertex_Input(const glm::fvec3& position,
+		const glm::fvec3& color,
+		const glm::fvec3& normal,
+		const glm::fvec2& uv)
+		: position(position)
+		, color(color)
+		, normal(normal)
+		, uv(uv)
+	{
+	}
+
+	glm::fvec3 position;
+	glm::fvec3 color;
+	glm::fvec3 normal;
+	glm::fvec3 tangent;
+	glm::fvec2 uv;
+	float power;
 	//float2 uv;
 };
 
@@ -47,6 +46,8 @@ public:
 	void Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewProjMatrix, const float* inverseView);
 
 	glm::mat4 GetWorldMatrix();
+	const std::vector<uint32_t>& GetIndexBuffer();
+	const std::vector<Vertex_Input>& GetVertexBuffer();
 
 private:
 	//			DirectX				//

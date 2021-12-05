@@ -88,7 +88,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glfw-3.3.4\include;$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glfw-3.3.4\include;$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -109,7 +109,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -130,7 +130,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -151,7 +151,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -167,6 +167,13 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="3rdParty\imgui-1.81\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="3rdParty\imgui-1.81\backends\imgui_impl_sdl.cpp" />
+    <ClCompile Include="3rdParty\imgui-1.81\imgui.cpp" />
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_demo.cpp" />
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_draw.cpp" />
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_tables.cpp" />
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_widgets.cpp" />
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="BaseEffect.cpp" />
     <ClCompile Include="Cell.cpp" />
@@ -181,6 +188,14 @@
     <ClCompile Include="SDL2Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="3rdParty\imgui-1.81\backends\imgui_impl_dx11.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\backends\imgui_impl_sdl.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\imconfig.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\imgui.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\imgui_internal.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\imstb_rectpack.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\imstb_textedit.h" />
+    <ClInclude Include="3rdParty\imgui-1.81\imstb_truetype.h" />
     <ClInclude Include="Application.h" />
     <ClInclude Include="BaseEffect.h" />
     <ClInclude Include="Cell.h" />

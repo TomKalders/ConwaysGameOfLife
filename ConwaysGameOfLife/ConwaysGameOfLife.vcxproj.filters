@@ -25,6 +25,12 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{b2dd906a-3730-4ff0-bae9-b6c3a16a7be7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="3rdParty">
+      <UniqueIdentifier>{9c070bcc-2b09-412e-a81c-c142e6f1a092}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rdParty\ImGui">
+      <UniqueIdentifier>{d6378efa-dbf7-4f43-bf00-9bfe2c76c65b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -63,6 +69,27 @@
     <ClCompile Include="Mesh.cpp">
       <Filter>DirectX</Filter>
     </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_draw.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_tables.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_widgets.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\imgui.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\imgui_demo.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\backends\imgui_impl_sdl.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\imgui-1.81\backends\imgui_impl_dx11.cpp">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cell.h">
@@ -100,6 +127,30 @@
     </ClInclude>
     <ClInclude Include="OBJ_Loader.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\imgui_internal.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\imstb_rectpack.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\imstb_textedit.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\imstb_truetype.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\imconfig.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\imgui.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\backends\imgui_impl_sdl.h">
+      <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\imgui-1.81\backends\imgui_impl_dx11.h">
+      <Filter>3rdParty\ImGui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

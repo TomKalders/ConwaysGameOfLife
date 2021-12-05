@@ -9,12 +9,10 @@ DirectXApplication::DirectXApplication(HINSTANCE hInstance)
 	UNREFERENCED_PARAMETER(hInstance);
 }
 
-void DirectXApplication::Run()
+bool DirectXApplication::Initialize()
 {
-    if (!Initialize())
-    {
-        throw std::exception("Application not initialized");
-    }
+	if (!m_pRenderer->Initialize(nullptr))
+		return false;
 
     m_pDirectXRenderer = static_cast<DirectXRenderer*>(m_pRenderer);
     if (!m_pDirectXRenderer)
@@ -22,27 +20,11 @@ void DirectXApplication::Run()
         throw std::exception{ "Unsupported renderer for this application" };
     }
 
-    auto timeLastFrame = std::chrono::high_resolution_clock::now();
-	
-    while (m_IsRunning)
+    if (m_pDirectXRenderer)
     {
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        m_DeltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
-
-        HandleInput();
-        Update(m_DeltaTime);
-        m_pRenderer->Render();
-
-        timeLastFrame = currentTime;
+        Mesh* mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
+        m_pDirectXRenderer->AddMesh(mesh);
     }
-
-    Cleanup();
-}
-
-bool DirectXApplication::Initialize()
-{
-	if (!m_pRenderer->Initialize(nullptr))
-		return false;
 
 	return true;
 }
@@ -50,6 +32,7 @@ bool DirectXApplication::Initialize()
 void DirectXApplication::HandleInput()
 {
     const Uint8* state = SDL_GetKeyboardState(nullptr);
+
     PerspectiveCamera* pCamera = m_pDirectXRenderer->GetCamera();
 
 	if (state[SDL_SCANCODE_W])
@@ -71,6 +54,15 @@ void DirectXApplication::HandleInput()
     {
         glm::fvec3 rightVector{ pCamera->GetRightVector() * pCamera->GetMovementSpeed() * m_DeltaTime };
         pCamera->Translate(rightVector);
+    }
+    if (state[SDL_SCANCODE_E])
+    {
+        pCamera->RotateYaw(pCamera->GetRotationSpeed() * m_DeltaTime);
+    }
+
+    if (state[SDL_SCANCODE_Q])
+    {
+        pCamera->RotateYaw(-pCamera->GetRotationSpeed() * m_DeltaTime);
     }
 
     SDL_Event e;

@@ -1,16 +1,26 @@
 #pragma once
 #include "Renderer.h"
 #include "PerspectiveCamera.h"
+#include "Mesh.h"
 
+//General Includes
 #include <string>
 #include <windows.h>
+#include "functional"
 
+//SDL2
 #include <SDL.h>
 
+//DirectX
 #include <dxgi.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <d3dx11effect.h>
+
+//IMGUI
+#include "imgui.h"
+#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_dx11.h"
 
 class DirectXRenderer : public Renderer
 {
@@ -23,7 +33,7 @@ public:
 	virtual ~DirectXRenderer() = default;
 
 	virtual bool Initialize(Grid* grid) override;
-	virtual void Render() const override;
+	virtual void Render() override;
 	virtual void Cleanup() override;
 	virtual int GetWindowWidth() const override;
 	virtual int GetWindowHeight() const override;
@@ -31,6 +41,11 @@ public:
 
 	HWND GetHandle() const;
 	PerspectiveCamera* GetCamera() const;
+	ID3D11Device* GetDevice() const;
+	const std::vector<Mesh*>& GetMeshes() const;
+
+	void AddMesh(Mesh* pMesh);
+	void RemoveMesh(Mesh* pmesh);
 
 private:
 	//----- Handle -----
@@ -38,7 +53,7 @@ private:
 	static LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	HWND m_Handle = NULL;
 	HMENU m_Menu = NULL;
-	static HINSTANCE m_Instance; /*= NULL;*/
+	static HINSTANCE m_Instance;
 	RECT m_Rect = RECT{};
 	//------------------
 
@@ -59,6 +74,13 @@ private:
 	ID3D11Resource* m_pRenderTargetBuffer = nullptr;
 	ID3D11RenderTargetView* m_pRenderTargetView = nullptr;
 	//-------------------
+
+	//------ IMGUI ------
+	char* m_pInputBuffer;
+
+	bool InitializeImGui();
+	void RenderImGui();
+	//-------------------
 	
 	PerspectiveCamera* m_pCamera = nullptr;
 	std::string m_WindowTitle;
@@ -67,6 +89,8 @@ private:
 	int m_Width;
 	int m_Height;
 
-	void Test() const;
+	std::vector<Mesh*> m_pMeshes;
+
+	void RenderMeshes() const;
 };
 

@@ -15,7 +15,7 @@ public:
 	OpenGLRenderer& operator=(OpenGLRenderer && other) = delete;
 
 	virtual bool Initialize(Grid* grid) override;
-	virtual void Render() const override;
+	virtual void Render() override;
 	virtual void Cleanup() override;
 
 	virtual int GetWindowWidth() const override;

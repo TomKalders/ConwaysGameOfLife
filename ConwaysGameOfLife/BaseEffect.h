@@ -19,6 +19,9 @@ public:
 	ID3DX11EffectMatrixVariable* GetWorldMatrix() const;
 	ID3DX11EffectMatrixVariable* GetViewInverseMatrix() const;
 	ID3DX11EffectScalarVariable* GetFilterMethod() const;
+	ID3DX11EffectScalarVariable* GetLightIntensity() const;
+	ID3DX11EffectVectorVariable* GetLightDirection() const;
+	ID3DX11EffectScalarVariable* GetPower() const;
 
 protected:
 	//Effects library variables
@@ -31,8 +34,11 @@ protected:
 	ID3DX11EffectMatrixVariable* m_pMatWorldVariable;
 	ID3DX11EffectMatrixVariable* m_pMatViewInverseVariable;
 
-	//FilterMode
+	//Other variables
 	ID3DX11EffectScalarVariable* m_pFilterMethod;
+	ID3DX11EffectScalarVariable* m_pLightIntensity;
+	ID3DX11EffectScalarVariable* m_pPower;
+	ID3DX11EffectVectorVariable* m_pLightDirection;
 	
 	void ShowEffectVarWarning(ID3DX11EffectVariable* var, const std::wstring& warning) const;
 };

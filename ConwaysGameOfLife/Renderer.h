@@ -12,7 +12,7 @@ public:
 	Renderer& operator=(Renderer&& other) = delete;
 
 	virtual bool Initialize(Grid* grid) = 0;
-	virtual void Render() const = 0;
+	virtual void Render() = 0;
 	virtual void Cleanup() = 0;
 
 	virtual int GetWindowWidth() const = 0;

@@ -22,6 +22,12 @@ BaseEffect::BaseEffect(ID3D11Device* pDevice, const std::wstring& assetFile)
 
 	m_pFilterMethod = m_pEffect->GetVariableByName("gFilterMethod")->AsScalar();
 	ShowEffectVarWarning(m_pFilterMethod, L"m_pFilterMethod not valid");
+
+	m_pLightIntensity = m_pEffect->GetVariableByName("gLightIntesity")->AsScalar();
+	ShowEffectVarWarning(m_pLightIntensity, L"m_pLightIntensity not valid");
+
+	m_pLightDirection = m_pEffect->GetVariableByName("gLightDirection")->AsVector();
+	ShowEffectVarWarning(m_pLightDirection, L"m_pLightDirection not valid");
 }
 
 BaseEffect::~BaseEffect()
@@ -114,6 +120,21 @@ ID3DX11EffectMatrixVariable* BaseEffect::GetViewInverseMatrix() const
 ID3DX11EffectScalarVariable* BaseEffect::GetFilterMethod() const
 {
 	return m_pFilterMethod;
+}
+
+ID3DX11EffectScalarVariable* BaseEffect::GetLightIntensity() const
+{
+	return m_pLightIntensity;
+}
+
+ID3DX11EffectVectorVariable* BaseEffect::GetLightDirection() const
+{
+	return m_pLightDirection;
+}
+
+ID3DX11EffectScalarVariable* BaseEffect::GetPower() const
+{
+	return m_pPower;
 }
 
 void BaseEffect::ShowEffectVarWarning(ID3DX11EffectVariable* var, const std::wstring& warning) const

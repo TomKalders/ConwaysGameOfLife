@@ -13,8 +13,6 @@ public:
 	DirectXApplication& operator=(DirectXApplication && other) = delete;
 	virtual ~DirectXApplication() = default;
 
-	virtual void Run() override;
-
 private:
 	virtual bool Initialize() override;
 	virtual void HandleInput() override;
