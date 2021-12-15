@@ -116,7 +116,10 @@ float4 PS(VS_OUTPUT input) : SV_TARGET
     //normalSample = (2 * normalSample) - (1, 1, 1);
     //const float3 normal = normalize(mul(tangentSpaceAxis, normalSample));
     
-    return saturate((float4(input.Color, 1) * input.Power) + 0.5f); //* CalculateLambert(input.Normal);
+    //return saturate((float4(input.Color, 1)) / CalculateLambert(input.Normal));
+    return (float4(0.3f, 0.3f, 0.3f, 1)) / CalculateLambert(input.Normal);
+    //float power = input.Power / 255.0f;
+    //return float4(power, power, power, 1);
 }
 
 //-----------------------------

@@ -433,23 +433,19 @@ void DirectXRenderer::RenderImGui()
     ImGui_ImplSDL2_NewFrame(m_pWindow);
     ImGui::NewFrame();
 
-    ////Demo
-    //bool showDemo = true;
-    //ImGui::ShowDemoWindow(&showDemo);
+    //ImGui::Begin("Options");
+    //static char input[128];
+    //ImGui::InputTextWithHint("OBJ", "Model", input, IM_ARRAYSIZE(input));
+    //if (ImGui::Button("Load OBJ Model"))
+    //{
+    //    Mesh* mesh = new Mesh{ m_pDevice, input };
+    //    if (mesh)
+    //    {
+    //        AddMesh(mesh);
+    //    }
+    //}
 
-    ImGui::Begin("Options");
-    static char input[128];
-    ImGui::InputTextWithHint("OBJ", "Model", input, IM_ARRAYSIZE(input));
-    if (ImGui::Button("Load OBJ Model"))
-    {
-        Mesh* mesh = new Mesh{ m_pDevice, input };
-        if (mesh)
-        {
-            AddMesh(mesh);
-        }
-    }
-
-    ImGui::End();
+    //ImGui::End();
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

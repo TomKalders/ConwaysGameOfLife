@@ -28,7 +28,7 @@ struct Vertex_Input
 	glm::fvec3 normal;
 	glm::fvec3 tangent;
 	glm::fvec2 uv;
-	float power;
+	float power = 0;
 	//float2 uv;
 };
 
@@ -48,6 +48,7 @@ public:
 	glm::mat4 GetWorldMatrix();
 	const std::vector<uint32_t>& GetIndexBuffer();
 	const std::vector<Vertex_Input>& GetVertexBuffer();
+	std::vector<Vertex_Input>& GetVertexBufferReference();
 
 private:
 	//			DirectX				//

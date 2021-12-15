@@ -56,6 +56,11 @@ Mesh::~Mesh()
 void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewProjMatrix, const float* inverseView)
 {
 	//Set vertex buffer
+	//D3D11_MAPPED_SUBRESOURCE resource;
+	//pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	//memcpy(resource.pData, m_VertexBuffer.data(), m_VertexBuffer.size());
+	//pDeviceContext->Unmap(m_pVertexBuffer, 0);
+	
 	UINT stride = sizeof(Vertex_Input);
 	UINT offset = 0;
 	pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertexBuffer, &stride, &offset);
@@ -104,6 +109,11 @@ const std::vector<uint32_t>& Mesh::GetIndexBuffer()
 }
 
 const std::vector<Vertex_Input>& Mesh::GetVertexBuffer()
+{
+	return m_VertexBuffer;
+}
+
+std::vector<Vertex_Input>& Mesh::GetVertexBufferReference()
 {
 	return m_VertexBuffer;
 }
@@ -173,10 +183,10 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 
 	//Create vertex buffer
 	D3D11_BUFFER_DESC bd = {};
-	bd.Usage = D3D11_USAGE_IMMUTABLE;
+	bd.Usage = D3D11_USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(Vertex_Input) * (uint32_t)vertices.size();
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
+	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
 	D3D11_SUBRESOURCE_DATA initData = { 0 };
 	initData.pSysMem = vertices.data();

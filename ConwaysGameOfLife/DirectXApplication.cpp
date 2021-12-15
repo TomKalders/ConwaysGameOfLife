@@ -30,7 +30,7 @@ bool DirectXApplication::Initialize()
 }
 
 void DirectXApplication::HandleInput()
-{
+{	
     const Uint8* state = SDL_GetKeyboardState(nullptr);
 
     PerspectiveCamera* pCamera = m_pDirectXRenderer->GetCamera();
@@ -76,10 +76,25 @@ void DirectXApplication::HandleInput()
             break;
         }
     }
+	
 }
 
-void DirectXApplication::Update(float)
+void DirectXApplication::Update(float deltaTime)
 {
+    const std::vector<Mesh*>& meshes = m_pDirectXRenderer->GetMeshes();
+
+	for (Mesh* mesh : meshes)
+	{
+        std::vector<Vertex_Input>& vertices = mesh->GetVertexBufferReference();
+		for (Vertex_Input& vertex : vertices)
+		{
+            vertex.power += deltaTime * 0.001f;
+			if (vertex.power > 255.f)
+			{
+                vertex.power = 0.f;
+			}
+		}
+	}
 }
 
 void DirectXApplication::Cleanup()
