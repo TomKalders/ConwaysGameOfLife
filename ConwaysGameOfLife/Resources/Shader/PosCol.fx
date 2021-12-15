@@ -9,6 +9,11 @@ int gFilterMethod : FILTER;
 float3 gLightDirection = float3(0.577f, -0.577f, 0.577);
 float gLightIntesity = float(1.f);
 
+cbuffer gPowerValues : register(b0)
+{
+    float gPower;
+}
+
 //-----------------------------
 //	Rasterizer states
 //-----------------------------
@@ -117,9 +122,9 @@ float4 PS(VS_OUTPUT input) : SV_TARGET
     //const float3 normal = normalize(mul(tangentSpaceAxis, normalSample));
     
     //return saturate((float4(input.Color, 1)) / CalculateLambert(input.Normal));
-    return (float4(0.3f, 0.3f, 0.3f, 1)) / CalculateLambert(input.Normal);
-    //float power = input.Power / 255.0f;
-    //return float4(power, power, power, 1);
+    //return (float4(input.p, 0.3f, 0.3f, 1)) / CalculateLambert(input.Normal);
+    float power = saturate(gPower );
+    return float4(power, power, power, 1);
 }
 
 //-----------------------------

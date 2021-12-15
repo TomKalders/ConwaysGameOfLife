@@ -41,7 +41,8 @@ public:
 
 	HWND GetHandle() const;
 	PerspectiveCamera* GetCamera() const;
-	ID3D11Device* GetDevice() const;
+	ID3D11Device* const GetDevice() const;
+	ID3D11DeviceContext* const GetDeviceContext() const;
 	const std::vector<Mesh*>& GetMeshes() const;
 
 	void AddMesh(Mesh* pMesh);

@@ -22,22 +22,26 @@ PerspectiveCamera::PerspectiveCamera(const glm::fvec3& position, const glm::fvec
 //Getters
 glm::fvec3 PerspectiveCamera::GetPosition() const
 {
-	return glm::fvec3{ m_LookAt[0].w, m_LookAt[1].w, m_LookAt[2].w };
+	//return glm::fvec3{ m_LookAt[0].w, m_LookAt[1].w, m_LookAt[2].w };
+	return glm::fvec3{ m_LookAt[3].x, m_LookAt[3].y, m_LookAt[3].z };
 }
 
 glm::fvec3 PerspectiveCamera::GetForwardVector() const
 {
-	return glm::fvec3{ m_LookAt[0].z, m_LookAt[1].z, m_LookAt[2].z };
+	//return glm::fvec3{ m_LookAt[0].z, m_LookAt[1].z, m_LookAt[2].z };
+	return glm::fvec3{ m_LookAt[2].x, m_LookAt[2].y, m_LookAt[2].z };
 }
 
 glm::fvec3 PerspectiveCamera::GetRightVector() const
 {
-	return glm::fvec3{ m_LookAt[0].x, m_LookAt[1].x, m_LookAt[2].x };
+	//return glm::fvec3{ m_LookAt[0].x, m_LookAt[1].x, m_LookAt[2].x };
+	return glm::fvec3{ m_LookAt[0].x, m_LookAt[0].y, m_LookAt[0].z };
 }
 
 glm::fvec3 PerspectiveCamera::GetUpVector() const
 {
-	return glm::fvec3{ m_LookAt[0].y, m_LookAt[1].y, m_LookAt[2].y };
+	//return glm::fvec3{ m_LookAt[0].y, m_LookAt[1].y, m_LookAt[2].y };
+	return glm::fvec3{ m_LookAt[1].x, m_LookAt[1].y, m_LookAt[1].z };
 }
 
 glm::mat4 PerspectiveCamera::GetLookAt() const
@@ -117,7 +121,6 @@ void PerspectiveCamera::SetRotationSpeed(float speed)
 
 void PerspectiveCamera::SetPosition(const glm::fvec3& position)
 {
-	
 	m_LookAt[3].x = position.x;
 	m_LookAt[3].y = position.y;
 	m_LookAt[3].z = -position.z;
@@ -172,8 +175,12 @@ void PerspectiveCamera::RotatePitch(float angle, bool isDegrees)
 //Private Functions
 void PerspectiveCamera::SetForwardVector(const glm::fvec3& forwardVector)
 {
-	m_LookAt[0].z = forwardVector.x;
-	m_LookAt[1].z = forwardVector.y;
+	//m_LookAt[0].z = forwardVector.x;
+	//m_LookAt[1].z = forwardVector.y;
+	//m_LookAt[2].z = forwardVector.z;
+
+	m_LookAt[2].x = forwardVector.x;
+	m_LookAt[2].y = forwardVector.y;
 	m_LookAt[2].z = forwardVector.z;
 }
 
@@ -200,11 +207,19 @@ void PerspectiveCamera::CalculateVectors()
 	glm::fvec3 right = glm::normalize(glm::cross(glm::fvec3{ 0, 1, 0 }, forward));
 	glm::fvec3 up = glm::normalize(glm::cross(forward, right));
 
-	m_LookAt[0].x = right.x;
-	m_LookAt[1].x = right.y;
-	m_LookAt[2].x = right.z;
+	//m_LookAt[0].x = right.x;
+	//m_LookAt[1].x = right.y;
+	//m_LookAt[2].x = right.z;
 
-	m_LookAt[0].y = up.x;
+	//m_LookAt[0].y = up.x;
+	//m_LookAt[1].y = up.y;
+	//m_LookAt[2].y = up.z;
+
+	m_LookAt[0].x = right.x;
+	m_LookAt[0].y = right.y;
+	m_LookAt[0].z = right.z;
+
+	m_LookAt[1].x = up.x;
 	m_LookAt[1].y = up.y;
-	m_LookAt[2].y = up.z;
+	m_LookAt[1].z = up.z;
 }

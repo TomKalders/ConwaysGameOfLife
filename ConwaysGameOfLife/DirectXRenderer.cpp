@@ -172,9 +172,14 @@ PerspectiveCamera* DirectXRenderer::GetCamera() const
     return m_pCamera;
 }
 
-ID3D11Device* DirectXRenderer::GetDevice() const
+ID3D11Device* const DirectXRenderer::GetDevice() const
 {
     return m_pDevice;
+}
+
+ID3D11DeviceContext* const DirectXRenderer::GetDeviceContext() const
+{
+    return m_pDeviceContext;
 }
 
 void DirectXRenderer::AddMesh(Mesh* pMesh)
@@ -433,19 +438,24 @@ void DirectXRenderer::RenderImGui()
     ImGui_ImplSDL2_NewFrame(m_pWindow);
     ImGui::NewFrame();
 
-    //ImGui::Begin("Options");
-    //static char input[128];
-    //ImGui::InputTextWithHint("OBJ", "Model", input, IM_ARRAYSIZE(input));
-    //if (ImGui::Button("Load OBJ Model"))
-    //{
-    //    Mesh* mesh = new Mesh{ m_pDevice, input };
-    //    if (mesh)
-    //    {
-    //        AddMesh(mesh);
-    //    }
-    //}
-
-    //ImGui::End();
+    ImGui::Begin("Data");
+    ImGui::DragFloat4("Lookat[0]", glm::value_ptr(m_pCamera->GetLookAt()[0]));
+    ImGui::DragFloat4("Lookat[1]", glm::value_ptr(m_pCamera->GetLookAt()[1]));
+    ImGui::DragFloat4("Lookat[2]", glm::value_ptr(m_pCamera->GetLookAt()[2]));
+    ImGui::DragFloat4("Lookat[3]", glm::value_ptr(m_pCamera->GetLookAt()[3]));
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::DragFloat4("Projection[0]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[0]));
+    ImGui::DragFloat4("Projection[1]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[1]));
+    ImGui::DragFloat4("Projection[2]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[2]));
+    ImGui::DragFloat4("Projection[3]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[3]));
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    float power = m_pMeshes[0]->GetPowerBuffer()[0];
+    ImGui::DragFloat("Power", &power);
+    ImGui::End();
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -478,46 +488,46 @@ void DirectXRenderer::RenderMeshes() const
 
 //Example vertex and index buffer for reference
 
-//const static std::vector<Vertex_Input> vertices =
+//const static std::vector<VertexInput> vertices =
 //{
-//    Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
-//    Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
-//    Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
-//    Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+//    VertexInput{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+//    VertexInput{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+//    VertexInput{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+//    VertexInput{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
 //                                                       
-//    Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
-//    Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
-//    Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
-//    Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+//    VertexInput{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+//    VertexInput{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+//    VertexInput{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
+//    VertexInput{{0.5f,0.5f,0.5f},     {255, 255, 255}},
 //                                                       
-//    Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
-//    Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
-//    Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
-//    Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+//    VertexInput{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+//    VertexInput{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+//    VertexInput{{0.5f,-0.5f,0.5f},    {255, 255, 255}},
+//    VertexInput{{0.5f,0.5f,0.5f},     {255, 255, 255}},
 //                                                       
-//    Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
-//    Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
-//    Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
-//    Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+//    VertexInput{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+//    VertexInput{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+//    VertexInput{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+//    VertexInput{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
 //                                                       
-//    Vertex_Input{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
-//    Vertex_Input{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
-//    Vertex_Input{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
-//    Vertex_Input{{0.5f,0.5f,0.5f},     {255, 255, 255}},
+//    VertexInput{{-0.5f,0.5f,0.5f},    {255, 255, 255}},
+//    VertexInput{{-0.5f,0.5f,-0.5f},   {255, 255, 255}},
+//    VertexInput{{0.5f,0.5f,-0.5f},    {255, 255, 255}},
+//    VertexInput{{0.5f,0.5f,0.5f},     {255, 255, 255}},
 //                                                       
-//    Vertex_Input{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
-//    Vertex_Input{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
-//    Vertex_Input{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
-//    Vertex_Input{{0.5f,-0.5f,0.5f},    {255, 255, 255}}
+//    VertexInput{{-0.5f,-0.5f,0.5f},   {255, 255, 255}},
+//    VertexInput{{-0.5f,-0.5f,-0.5f},  {255, 255, 255}},
+//    VertexInput{{0.5f,-0.5f,-0.5f},   {255, 255, 255}},
+//    VertexInput{{0.5f,-0.5f,0.5f},    {255, 255, 255}}
 
-//     //Vertex_Input{{-1, -1, -1},  /*{0, 0, 1} , */{145, 145, 145} },
-//     //Vertex_Input{{1, -1, -1} ,  /*{1, 0, 0} , */{145, 145, 145} },
-//     //Vertex_Input{{1, 1, -1}  ,  /*{0, 0, -1}, */{145, 145, 145} },
-//     //Vertex_Input{{-1, 1, -1} ,  /*{-1, 0, 0}, */{145, 145, 145} },
-//     //Vertex_Input{{-1, -1, 1} ,  /*{0, 1, 0} , */{145, 145, 145} },
-//     //Vertex_Input{{1, -1, 1}  ,  /*{0, -1, 0}, */{145, 145, 145} },
-//     //Vertex_Input{{1, 1, 1}   ,  /*{0, 0, 1} , */{145, 145, 145} },
-//     //Vertex_Input{{-1, 1, 1}  ,  /*{1, 0, 0} , */{145, 145, 145} },
+//     //VertexInput{{-1, -1, -1},  /*{0, 0, 1} , */{145, 145, 145} },
+//     //VertexInput{{1, -1, -1} ,  /*{1, 0, 0} , */{145, 145, 145} },
+//     //VertexInput{{1, 1, -1}  ,  /*{0, 0, -1}, */{145, 145, 145} },
+//     //VertexInput{{-1, 1, -1} ,  /*{-1, 0, 0}, */{145, 145, 145} },
+//     //VertexInput{{-1, -1, 1} ,  /*{0, 1, 0} , */{145, 145, 145} },
+//     //VertexInput{{1, -1, 1}  ,  /*{0, -1, 0}, */{145, 145, 145} },
+//     //VertexInput{{1, 1, 1}   ,  /*{0, 0, 1} , */{145, 145, 145} },
+//     //VertexInput{{-1, 1, 1}  ,  /*{1, 0, 0} , */{145, 145, 145} },
 //};
 
 //const static std::vector<uint32_t> indices =

@@ -10,7 +10,7 @@
 #pragma warning(pop)
 
 
-Mesh::Mesh(ID3D11Device* pDevice, const std::vector<Vertex_Input>& vertices, const std::vector<uint32_t>& indices)
+Mesh::Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices)
 	: m_pEffect{}
 	, m_pVertexLayout{nullptr}
 	, m_pVertexBuffer{nullptr}
@@ -39,6 +39,9 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath)
 
 Mesh::~Mesh()
 {
+	if (m_pPowerBuffer)
+		m_pPowerBuffer->Release();
+
 	if (m_pIndexBuffer)
 		m_pIndexBuffer->Release();
 
@@ -56,12 +59,7 @@ Mesh::~Mesh()
 void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewProjMatrix, const float* inverseView)
 {
 	//Set vertex buffer
-	//D3D11_MAPPED_SUBRESOURCE resource;
-	//pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-	//memcpy(resource.pData, m_VertexBuffer.data(), m_VertexBuffer.size());
-	//pDeviceContext->Unmap(m_pVertexBuffer, 0);
-	
-	UINT stride = sizeof(Vertex_Input);
+	UINT stride = sizeof(VertexInput);
 	UINT offset = 0;
 	pDeviceContext->IASetVertexBuffers(0, 1, &m_pVertexBuffer, &stride, &offset);
 
@@ -108,19 +106,60 @@ const std::vector<uint32_t>& Mesh::GetIndexBuffer()
 	return m_IndexBuffer;
 }
 
-const std::vector<Vertex_Input>& Mesh::GetVertexBuffer()
+const std::vector<VertexInput>& Mesh::GetVertexBuffer()
 {
 	return m_VertexBuffer;
 }
 
-std::vector<Vertex_Input>& Mesh::GetVertexBufferReference()
+const std::vector<float>& Mesh::GetPowerBuffer()
 {
-	return m_VertexBuffer;
+	return m_PowerBuffer;
 }
 
-HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Vertex_Input>& vertices, const std::vector<uint32_t>& indices)
+//std::vector<VertexInput>& Mesh::GetVertexBufferReference()
+//{
+//	return m_VertexBuffer;
+//}
+
+void Mesh::SetVertexBuffer(ID3D11DeviceContext*, const std::vector<VertexInput>&)
+{
+	//m_VertexBuffer = vertexBuffer;
+
+	//D3D11_MAPPED_SUBRESOURCE resource;
+	//pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	////resource.pData = m_VertexBuffer.data();
+	//memcpy(resource.pData, m_VertexBuffer.data(), m_VertexBuffer.size() * sizeof(VertexInput));
+	//pDeviceContext->Unmap(m_pVertexBuffer, 0);
+
+	//std::cout << m_VertexBuffer[0].power << std::endl;
+	//D3D11_MAPPED_SUBRESOURCE resource;
+
+	//for (int i{}; i < m_VertexBuffer.size(); i++)
+	//{
+	//	pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	//	resource.pData = m_VertexBuffer.data();
+	//	memcpy((VertexInput*)resource.pData + i, &m_VertexBuffer[i], sizeof(VertexInput));
+	//	pDeviceContext->Unmap(m_pVertexBuffer, 0);
+	//}
+}
+
+void Mesh::SetPowerBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<float>& powerBuffer)
+{
+	m_PowerBuffer = powerBuffer;
+
+	D3D11_MAPPED_SUBRESOURCE resource;
+	pDeviceContext->Map(m_pPowerBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	memcpy(resource.pData, m_PowerBuffer.data(), m_PowerBuffer.size() * sizeof(float));
+	pDeviceContext->Unmap(m_pPowerBuffer, 0);
+}
+
+
+HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices)
 {
 	HRESULT result = S_OK;
+
+	if (m_pPowerBuffer)
+		m_pPowerBuffer->Release();
 
 	if (m_pIndexBuffer)
 		m_pIndexBuffer->Release();
@@ -183,10 +222,10 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 
 	//Create vertex buffer
 	D3D11_BUFFER_DESC bd = {};
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Vertex_Input) * (uint32_t)vertices.size();
+	bd.Usage = D3D11_USAGE_IMMUTABLE;
+	bd.ByteWidth = sizeof(VertexInput) * (uint32_t)vertices.size();
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
 	D3D11_SUBRESOURCE_DATA initData = { 0 };
 	initData.pSysMem = vertices.data();
@@ -203,6 +242,19 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 	bd.MiscFlags = 0;
 	initData.pSysMem = indices.data();
 	result = pDevice->CreateBuffer(&bd, &initData, &m_pIndexBuffer);
+	if (FAILED(result))
+		return result;
+
+	//Create constant buffer
+	m_PowerBuffer.resize(vertices.size());
+
+	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.ByteWidth = uint32_t((sizeof(float) + (16 - sizeof(float) % 16)) * m_PowerBuffer.size());
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.MiscFlags = 0;
+	initData.pSysMem = m_PowerBuffer.data();
+	result = pDevice->CreateBuffer(&bd, &initData, &m_pPowerBuffer);
 	if (FAILED(result))
 		return result;
 
@@ -245,9 +297,9 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 					int index0 = m_IndexBuffer[i];
 					int index1 = m_IndexBuffer[i + 1];
 					int index2 = m_IndexBuffer[i + 2];
-					Vertex_Input& vertex0 = m_VertexBuffer[index0];
-					Vertex_Input& vertex1 = m_VertexBuffer[index1];
-					Vertex_Input& vertex2 = m_VertexBuffer[index2];
+					VertexInput& vertex0 = m_VertexBuffer[index0];
+					VertexInput& vertex1 = m_VertexBuffer[index1];
+					VertexInput& vertex2 = m_VertexBuffer[index2];
 
 					const glm::fvec3 edge0 = (vertex1.position - vertex0.position);
 					const glm::fvec3 edge1 = (vertex2.position - vertex0.position);

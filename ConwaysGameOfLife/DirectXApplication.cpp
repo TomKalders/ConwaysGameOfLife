@@ -85,15 +85,33 @@ void DirectXApplication::Update(float deltaTime)
 
 	for (Mesh* mesh : meshes)
 	{
-        std::vector<Vertex_Input>& vertices = mesh->GetVertexBufferReference();
-		for (Vertex_Input& vertex : vertices)
-		{
-            vertex.power += deltaTime * 0.001f;
-			if (vertex.power > 255.f)
-			{
-                vertex.power = 0.f;
-			}
-		}
+  //      std::vector<VertexInput> newVertices;
+		//for (const VertexInput& vertex : mesh->GetVertexBuffer())
+		//{
+  //          VertexInput newVertex{ vertex };
+  //          newVertex.power += deltaTime;
+		//	if (newVertex.power > 255.f)
+		//	{
+  //              newVertex.power = 0.f;
+		//	}
+  //          newVertices.push_back(newVertex);
+		//}
+        //mesh->SetVertexBuffer(m_pDirectXRenderer->GetDeviceContext(), newVertices);
+
+        std::vector<float> newPowerValues{};
+        const std::vector<float>& powerValues = mesh->GetPowerBuffer();
+        newPowerValues.reserve(powerValues.size());
+
+        for (int i{}; i < powerValues.size(); i++)
+        {
+            float value = powerValues[i] + deltaTime;
+            if (value > 255.f)
+                value = 0;
+
+            newPowerValues.push_back(value);
+        }
+
+        mesh->SetPowerBuffer(m_pDirectXRenderer->GetDeviceContext(), newPowerValues);
 	}
 }
 
