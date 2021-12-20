@@ -21,6 +21,17 @@ struct VertexInput
 		, normal(normal)
 		, uv(uv)
 		, tangent({0, 0, 0})
+		, power(255.f/2)
+	{
+	}
+
+	VertexInput()
+		: position({})
+		, color({})
+		, normal({})
+		, tangent({})
+		, uv({})
+		, power(0.f)
 	{
 	}
 
@@ -29,7 +40,7 @@ struct VertexInput
 	glm::fvec3 normal;
 	glm::fvec3 tangent;
 	glm::fvec2 uv;
-	float power = 0;
+	float power;
 };
 
 class Mesh
@@ -48,19 +59,21 @@ public:
 	glm::mat4 GetWorldMatrix();
 	const std::vector<uint32_t>& GetIndexBuffer();
 	const std::vector<VertexInput>& GetVertexBuffer();
-	const std::vector<float>& GetPowerBuffer();
+	//const std::vector<float>& GetPowerBuffer();
 	//const std::vector<VertexInput>& GetVertexBufferReference();
 
 	void SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer);
-	void SetPowerBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<float>& powerBuffer);
+	//void SetPowerBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<float>& powerBuffer);
 
 private:
 	//			DirectX				//
 	BaseEffect* m_pEffect;
+
+
 	ID3D11InputLayout* m_pVertexLayout;
 	ID3D11Buffer* m_pVertexBuffer;
 	ID3D11Buffer* m_pIndexBuffer;
-	ID3D11Buffer* m_pPowerBuffer;
+	//ID3D11Buffer* m_pPowerBuffer;
 
 	uint32_t m_AmountIndices;
 	//////////////////////////////////
@@ -72,7 +85,7 @@ private:
 	void LoadMeshFromOBJ(const std::string& pathName);
 	std::vector<uint32_t> m_IndexBuffer;
 	std::vector<VertexInput> m_VertexBuffer;
-	std::vector<float> m_PowerBuffer;
+	//std::vector<float> m_PowerBuffer;
 
 	HRESULT CreateDirectXResources(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices);
 	void CreateEffect(ID3D11Device* pDevice/*, bool isTransparent*/);

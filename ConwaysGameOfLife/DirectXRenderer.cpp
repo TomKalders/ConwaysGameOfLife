@@ -453,7 +453,7 @@ void DirectXRenderer::RenderImGui()
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Spacing();
-    float power = m_pMeshes[0]->GetPowerBuffer()[0];
+    float power = m_pMeshes[0]->GetVertexBuffer()[0].power;
     ImGui::DragFloat("Power", &power);
     ImGui::End();
 

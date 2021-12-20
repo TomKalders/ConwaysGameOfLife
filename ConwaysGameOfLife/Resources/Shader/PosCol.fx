@@ -101,10 +101,9 @@ VS_OUTPUT VS(VS_INPUT input)
     return output;
 }
 
-float4 CalculateLambert(float3 normal)
+float4 CalculateLambert(float3 normal, float intensity)
 {   
-    //float4 lambert = float4(1, 1, 1, 1) * (gLightIntesity * (dot(-normal, gLightDirection)));
-    float4 lambert = float4(1, 1, 1, 1) * (gLightIntesity * dot(-normal, gLightDirection));
+    float4 lambert = float4(1, 1, 1, 1) * (intensity * dot(-normal, gLightDirection));
     return saturate(lambert);
 }
 
@@ -123,8 +122,12 @@ float4 PS(VS_OUTPUT input) : SV_TARGET
     
     //return saturate((float4(input.Color, 1)) / CalculateLambert(input.Normal));
     //return (float4(input.p, 0.3f, 0.3f, 1)) / CalculateLambert(input.Normal);
-    float power = saturate(gPower );
-    return float4(power, power, power, 1);
+    //float power = saturate(gPower);
+    //float power = input.Power / 255.0f;
+    //return float4(power, power, power, 1);
+    
+    return float4(input.Color, 1) * CalculateLambert(input.Normal, input.Power);
+
 }
 
 //-----------------------------

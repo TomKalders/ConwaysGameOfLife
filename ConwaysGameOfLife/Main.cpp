@@ -54,8 +54,8 @@ void CreateApplication(HINSTANCE hInstance)
 	//Backspace:    clear the grid
 
 	//Create an application, you can give it the size of a cell
-	//Application* app{ new SDL2Application{15} };
-	int appNr = GetApplication();
+	//int appNr = GetApplication();
+	int appNr = 1;
 
 	Application* app = nullptr;
 	switch (appNr)
