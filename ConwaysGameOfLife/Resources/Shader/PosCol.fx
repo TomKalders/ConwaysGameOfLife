@@ -71,7 +71,8 @@ DepthStencilState gDepthStencilState
 struct VS_INPUT
 {
 	float3 Position : POSITION;
-	float3 Color : COLOR;
+    float3 Color : COLOR;
+    float3 ColorTwo : SECCOLOR;
     float3 Normal : NORMAL;
     float3 Tangent : TANGENT;
     float2 UV : TEXCOORD;
@@ -82,6 +83,7 @@ struct VS_OUTPUT
 {
 	float4 Position : SV_POSITION;
     float3 Color : COLOR;
+    float3 ColorTwo : SECCOLOR;
 	float3 WorldPosition : WORLDPOSITION;
     float3 Normal : NORMAL;
     float3 Tangent : TANGENT;
@@ -97,14 +99,9 @@ VS_OUTPUT VS(VS_INPUT input)
 	output.Normal = mul(normalize(input.Normal), (float3x3)gWorldMatrix);
 	output.Tangent = mul(normalize(input.Tangent), (float3x3)gWorldMatrix);
     output.Color = input.Color;
+    output.ColorTwo = input.ColorTwo;
     output.Power = input.Power;
     return output;
-}
-
-float4 CalculateLambert(float3 normal, float intensity)
-{   
-    float4 lambert = float4(1, 1, 1, 1) * (intensity * dot(-normal, gLightDirection));
-    return saturate(lambert);
 }
 
 //-----------------------------
@@ -112,22 +109,17 @@ float4 CalculateLambert(float3 normal, float intensity)
 //-----------------------------
 float4 PS(VS_OUTPUT input) : SV_TARGET
 {
-    //const float3 binormal = cross(input.Tangent, input.Normal);
-    //float3x3 tangentSpaceAxis = float3x3(input.Tangent, binormal, input.Normal);
-    //tangentSpaceAxis = transpose(tangentSpaceAxis);
-	
-    //float3 normalSample = input.Normal;
-    //normalSample = (2 * normalSample) - (1, 1, 1);
-    //const float3 normal = normalize(mul(tangentSpaceAxis, normalSample));
-    
-    //return saturate((float4(input.Color, 1)) / CalculateLambert(input.Normal));
-    //return (float4(input.p, 0.3f, 0.3f, 1)) / CalculateLambert(input.Normal);
-    //float power = saturate(gPower);
-    //float power = input.Power / 255.0f;
-    //return float4(power, power, power, 1);
-    
-    return float4(input.Color, 1) * CalculateLambert(input.Normal, input.Power);
+    float lambert = 0.5f + dot(-input.Normal, gLightDirection);
 
+    float3 color1 = input.Color;
+    float3 color2 = input.ColorTwo;
+    
+    //Interpolate between the colors
+    float r = (color2.r - color1.r) * input.Power + color1.r;
+    float g = (color2.g - color1.g) * input.Power + color1.g;
+    float b = (color2.b - color1.b) * input.Power + color1.b;
+    
+    return float4(r, g, b, 1) * lambert;
 }
 
 //-----------------------------
@@ -137,7 +129,7 @@ technique11 DefaultTechnique
 {
 	pass P0
 	{
-		SetRasterizerState(gRasterizerState);
+		//SetRasterizerState(gRasterizerState);
         //SetDepthStencilState(gDepthStencilState, 0);
         //SetBlendState(gBlendState, float4(0.f, 0.f, 0.f, 0.f), 0xFFFFFFFF);
 		SetVertexShader(CompileShader(vs_5_0, VS()));

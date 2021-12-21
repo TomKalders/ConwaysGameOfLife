@@ -74,14 +74,16 @@ private:
 	ID3D11DepthStencilView* m_pDepthStencilView = nullptr;
 	ID3D11Resource* m_pRenderTargetBuffer = nullptr;
 	ID3D11RenderTargetView* m_pRenderTargetView = nullptr;
+
+	bool m_showWireframe;
 	//-------------------
 
 	//------ IMGUI ------
-	char* m_pInputBuffer;
-
 	bool InitializeImGui();
 	void RenderImGui();
 	//-------------------
+
+	int m_Index;
 	
 	PerspectiveCamera* m_pCamera = nullptr;
 	std::string m_WindowTitle;

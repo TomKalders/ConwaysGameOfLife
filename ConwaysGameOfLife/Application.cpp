@@ -17,6 +17,7 @@ void Application::Run()
 	try
 	{
 		bool result = Initialize();
+		PostInitialize();
 
 		//store the time from the last frame
 		auto timeLastFrame = std::chrono::high_resolution_clock::now();

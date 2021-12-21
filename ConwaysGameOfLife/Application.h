@@ -19,6 +19,7 @@ public:
 
 private:
 	virtual bool Initialize() = 0;
+	virtual void PostInitialize() = 0;
 	virtual void HandleInput() = 0;
 	virtual void Update(float deltaTime) = 0;
 	virtual void Cleanup() = 0;

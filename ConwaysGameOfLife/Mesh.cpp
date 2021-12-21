@@ -15,8 +15,9 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, cons
 	, m_pVertexLayout{nullptr}
 	, m_pVertexBuffer{nullptr}
 	, m_pIndexBuffer{nullptr}
+	, m_pRasterizerStateWireframe{nullptr}
+	, m_pRasterizerStateSolid{nullptr}
 	, m_AmountIndices{}
-	, m_pResourceView{nullptr}
 	, m_WorldMatrix{ glm::mat4{1.f} }
 {
 	CreateEffect(pDevice);
@@ -29,7 +30,6 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath)
 	, m_pVertexBuffer{ nullptr }
 	, m_pIndexBuffer{ nullptr }
 	, m_AmountIndices{}
-	, m_pResourceView{ nullptr }
 	, m_WorldMatrix{ glm::mat4{1.f} }
 {
 	CreateEffect(pDevice);
@@ -39,6 +39,11 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath)
 
 Mesh::~Mesh()
 {
+	if (m_pRasterizerStateSolid)
+		m_pRasterizerStateSolid->Release();
+
+	if (m_pRasterizerStateWireframe)
+		m_pRasterizerStateWireframe->Release();
 
 	if (m_pIndexBuffer)
 		m_pIndexBuffer->Release();
@@ -51,7 +56,6 @@ Mesh::~Mesh()
 
 	if (m_pEffect)
 		delete m_pEffect;
-
 }
 
 void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewProjMatrix, const float* inverseView)
@@ -63,6 +67,12 @@ void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewPro
 
 	//Set index buffer
 	pDeviceContext->IASetIndexBuffer(m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+	//Set rasterizer state
+	if (m_WireFrameEnabled)
+		pDeviceContext->RSSetState(m_pRasterizerStateWireframe);
+	else
+		pDeviceContext->RSSetState(m_pRasterizerStateSolid);
 
 	//Set input layout
 	pDeviceContext->IASetInputLayout(m_pVertexLayout);
@@ -109,80 +119,102 @@ const std::vector<VertexInput>& Mesh::GetVertexBuffer()
 	return m_VertexBuffer;
 }
 
-//const std::vector<float>& Mesh::GetPowerBuffer()
-//{
-//	return m_PowerBuffer;
-//}
-
-//std::vector<VertexInput>& Mesh::GetVertexBufferReference()
-//{
-//	return m_VertexBuffer;
-//}
+const std::set<VertexInput*>& Mesh::GetVerticesToUpdate()
+{
+	return m_VerticesToUpdate;
+}
 
 void Mesh::SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer)
 {
 	m_VertexBuffer = vertexBuffer;
-	//std::vector<uint32_t> emptyIndex{};
-
-	//D3D11_MAPPED_SUBRESOURCE resource;
-	//pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-	////resource.pData = m_VertexBuffer.data();
-	//memcpy(resource.pData, deleteMe.data(), deleteMe.size() * sizeof(VertexInput));
-	//pDeviceContext->Unmap(m_pVertexBuffer, 0);
-
-	//pDeviceContext->Map(m_pIndexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-	////resource.pData = m_VertexBuffer.data();
-	//memcpy(resource.pData, emptyIndex.data(), emptyIndex.size() * sizeof(VertexInput));
-	//pDeviceContext->Unmap(m_pIndexBuffer, 0);
-
-	if (m_pVertexBuffer)
-		m_pVertexBuffer->Release();
-
-	D3D11_BUFFER_DESC bd = {};
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(VertexInput) * (uint32_t)m_VertexBuffer.size();
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	bd.MiscFlags = 0;
-	D3D11_SUBRESOURCE_DATA initData = { 0 };
-	initData.pSysMem = m_VertexBuffer.data();
-
-	ID3D11Device* pDevice = nullptr;
-	pDeviceContext->GetDevice(&pDevice);
-	pDevice->CreateBuffer(&bd, &initData, &m_pVertexBuffer);
-	pDevice->Release();
-
-	//pDeviceContext->UpdateSubresource(m_pCurrentVertexBuffer, 0, nullptr, m_VertexBuffer.data(), 0, 0);
-
-	//std::cout << m_VertexBuffer[0].power << std::endl;
-	//D3D11_MAPPED_SUBRESOURCE resource;
-
-	//for (int i{}; i < m_VertexBuffer.size(); i++)
-	//{
-	//	pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-	//	resource.pData = m_VertexBuffer.data();
-	//	memcpy((VertexInput*)resource.pData + i, &m_VertexBuffer[i], sizeof(VertexInput));
-	//	pDeviceContext->Unmap(m_pVertexBuffer, 0);
-	//}
+	UpdateVertexBuffer(pDeviceContext);
 }
 
-//void Mesh::SetPowerBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<float>& powerBuffer)
-//{
-//	m_PowerBuffer = powerBuffer;
-//
-//	D3D11_MAPPED_SUBRESOURCE resource;
-//	pDeviceContext->Map(m_pPowerBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-//	memcpy(resource.pData, m_PowerBuffer.data(), m_PowerBuffer.size() * sizeof(float));
-//	pDeviceContext->Unmap(m_pPowerBuffer, 0);
-//}
+void Mesh::SetWireframe(bool enabled)
+{
+	m_WireFrameEnabled = enabled;
+}
 
+
+void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
+{
+	//Loop over all the vertices that have a pulse going through and update them
+	//If the pulse zeros out, mark them to remove them from the list.
+	std::vector<VertexInput*> verticesToRemove{};
+	for (VertexInput* vertex : m_VerticesToUpdate)
+	{
+		if (vertex->pulseStrength > 0.f)
+			vertex->pulseStrength -= deltaTime;
+		else
+		{
+			vertex->pulseStrength = 0.f;
+			verticesToRemove.push_back(vertex);
+		}
+	}
+
+	//Remove the vertices with no pulse from the list.
+	for (VertexInput* vertex : verticesToRemove)
+	{
+		m_VerticesToUpdate.erase(vertex);
+	}
+
+	//Clear the vector to be reused and update all the neighbour vertices.
+	verticesToRemove.clear();
+	for (VertexInput* vertex : m_NeighboursToUpdate)
+	{
+		vertex->timeBeforeActive -= deltaTime;
+		if (vertex->timeBeforeActive <= 0.f)
+		{
+			verticesToRemove.push_back(vertex);
+			PulseVertex(vertex, pDeviceContext, false);
+		}
+	}
+
+	//Remove the neighbour vertices with from the list.
+	for (VertexInput* vertex : verticesToRemove)
+	{
+		m_NeighboursToUpdate.erase(vertex);
+	}
+
+	UpdateVertexBuffer(pDeviceContext);
+}
+
+void Mesh::PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+{
+	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
+	{
+		PulseVertex(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
+	}
+}
+
+void Mesh::PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+{
+	if (vertex)
+	{
+		if (vertex->pulseStrength <= 0.3f)
+		{
+			vertex->pulseStrength = 1;
+			m_VerticesToUpdate.insert(vertex);
+			PulseNeighbours(*vertex);
+		}
+	}
+
+	if (updateVertexBuffer)
+		UpdateVertexBuffer(pDeviceContext);
+}
+
+void Mesh::PulseMesh(ID3D11DeviceContext* pDeviceContext)
+{
+	for (int i{}; i < m_VertexBuffer.size(); i++)
+	{
+		PulseVertex(i, pDeviceContext, false);
+	}
+	UpdateVertexBuffer(pDeviceContext);
+}
 
 HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices)
 {
 	HRESULT result = S_OK;
-
-	//if (m_pPowerBuffer)
-	//	m_pPowerBuffer->Release();
 
 	if (m_pIndexBuffer)
 		m_pIndexBuffer->Release();
@@ -194,7 +226,7 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 		m_pVertexLayout->Release();
 
 	//Create vertex layout
-	static const uint32_t numElements{ 6 };
+	static const uint32_t numElements{ 7 };
 	D3D11_INPUT_ELEMENT_DESC vertexDesc[numElements]{};
 
 	vertexDesc[0].SemanticName = "POSITION";
@@ -207,30 +239,32 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 	vertexDesc[1].AlignedByteOffset = 12;
 	vertexDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	vertexDesc[2].SemanticName = "NORMAL";
+	vertexDesc[2].SemanticName = "SECCOLOR";
 	vertexDesc[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	vertexDesc[2].AlignedByteOffset = 24;
 	vertexDesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	vertexDesc[3].SemanticName = "TANGENT";
+	vertexDesc[3].SemanticName = "NORMAL";
 	vertexDesc[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	vertexDesc[3].AlignedByteOffset = 36;
 	vertexDesc[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	vertexDesc[4].SemanticName = "TEXCOORD";
-	vertexDesc[4].Format = DXGI_FORMAT_R32G32_FLOAT;
-	vertexDesc[4].AlignedByteOffset = 44;
+	vertexDesc[4].SemanticName = "TANGENT";
+	vertexDesc[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	vertexDesc[4].AlignedByteOffset = 48;
 	vertexDesc[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	vertexDesc[5].SemanticName = "POWER";
-	vertexDesc[5].Format = DXGI_FORMAT_R32_FLOAT;
-	vertexDesc[5].AlignedByteOffset = 48;
+	vertexDesc[5].SemanticName = "TEXCOORD";
+	vertexDesc[5].Format = DXGI_FORMAT_R32G32_FLOAT;
+	vertexDesc[5].AlignedByteOffset = 60;
 	vertexDesc[5].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	//vertexDesc[3].SemanticName = "TEXCOORD";
-	//vertexDesc[3].Format = DXGI_FORMAT_R32G32_FLOAT;
-	//vertexDesc[3].AlignedByteOffset = 36;
-	//vertexDesc[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	vertexDesc[6].SemanticName = "POWER";
+	vertexDesc[6].Format = DXGI_FORMAT_R32_FLOAT;
+	vertexDesc[6].AlignedByteOffset = 68;
+	vertexDesc[6].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+
+
 
 	//Create the input layout
 	D3DX11_PASS_DESC passDesc;
@@ -268,24 +302,31 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 	if (FAILED(result))
 		return result;
 
-	//Create constant buffer
-	//m_PowerBuffer.resize(vertices.size());
+	//Create wireframe rasterizer state
+	D3D11_RASTERIZER_DESC rswf{};
+	rswf.FillMode = D3D11_FILL_WIREFRAME;
+	rswf.CullMode = D3D11_CULL_NONE;
+	rswf.DepthClipEnable = true;
+	result = pDevice->CreateRasterizerState(&rswf, &m_pRasterizerStateWireframe);
+	if (FAILED(result))
+		return result;
 
-	//bd.Usage = D3D11_USAGE_DYNAMIC;
-	//bd.ByteWidth = uint32_t((sizeof(float) + (16 - sizeof(float) % 16)) * m_PowerBuffer.size());
-	//bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	//bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	//bd.MiscFlags = 0;
-	//initData.pSysMem = m_PowerBuffer.data();
-	//result = pDevice->CreateBuffer(&bd, &initData, &m_pPowerBuffer);
-	//if (FAILED(result))
-	//	return result;
+	//Create solid rasterizer state
+	D3D11_RASTERIZER_DESC rss{};
+	rss.FillMode = D3D11_FILL_SOLID;
+	rss.CullMode = D3D11_CULL_BACK;
+	rss.FrontCounterClockwise = true;
+	result = pDevice->CreateRasterizerState(&rss, &m_pRasterizerStateSolid);
+	if (FAILED(result))
+		return result;
 
 	return result;
 }
 
 void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 {
+	std::cout << "[Started Loading Mesh]\n";
+	std::cout << "Started Reading Mesh File\n";
 	objl::Loader loader;
 
 	bool loadout = loader.LoadFile(pathName);
@@ -293,11 +334,15 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 	{
 		if (loader.LoadedMeshes.size() > 0)
 		{
+			glm::fvec3 color1 = {  50 / 255.f, 151 / 255.f, 142 / 255.f };
+			glm::fvec3 color2 = { 225 / 255.f,  73 / 255.f,  80 / 255.f } ;
+
 			for (const objl::Vertex& vertex : loader.LoadedVertices)
 			{
 				m_VertexBuffer.push_back({
 					{ vertex.Position.X, vertex.Position.Y, vertex.Position.Z },
-					{ 1.f, 1.f, 1.f},
+					color1,
+					color2,
 					{ vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z },
 					{ vertex.TextureCoordinate.X, vertex.TextureCoordinate.Y }
 				});
@@ -307,16 +352,21 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 			{
 				m_IndexBuffer.push_back(index);
 			}
+			std::cout << "Finished Reading Mesh File\n";
+
+			OptimizeIndexBuffer();
 
 			for (int i = 0; i < m_IndexBuffer.size(); i++)
 			{
 				if (i % 3 == 2)
 				{
+					//Change handedness
 					std::swap(m_IndexBuffer[i - 1], m_IndexBuffer[i]);
 				}
 
 				if (i % 3 == 0)
 				{
+					//Calculate Tangent
 					int index0 = m_IndexBuffer[i];
 					int index1 = m_IndexBuffer[i + 1];
 					int index2 = m_IndexBuffer[i + 2];
@@ -329,10 +379,9 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 
 					const glm::fvec2 diffX = glm::fvec2(vertex1.uv.x - vertex0.uv.x, vertex2.uv.x - vertex0.uv.x);
 					const glm::fvec2 diffY = glm::fvec2(vertex1.uv.y - vertex0.uv.y, vertex2.uv.y - vertex0.uv.y);
-					const float r = 1.f / (diffX.x * diffY.y - diffX.y * diffY.x)/*glm::cross(diffX, diffY)*/;
+					const float r = 1.f / (diffX.x * diffY.y - diffX.y * diffY.x);
 
 					glm::vec3 tangent = (edge0 * diffY.y - edge1 * diffY.x) * r;
-					//tangent.z = -tangent.z;
 					vertex0.tangent = tangent;
 					vertex1.tangent = tangent;
 					vertex2.tangent = tangent;
@@ -340,11 +389,96 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 			}
 		}
 	}
+	std::cout << "Finished Loading Mesh\n";
 }
 
-
-void Mesh::CreateEffect(ID3D11Device* pDevice/*, bool isTransparent*/)
+void Mesh::OptimizeIndexBuffer()
 {
+	std::cout << "Started Optimizing Index Buffer\n";
+	//Get rid of out of bounds indices
+	std::vector<uint32_t>::iterator removeIt = std::remove_if(m_IndexBuffer.begin(), m_IndexBuffer.end(), [this](uint32_t index)
+		{
+			return index >= m_VertexBuffer.size();
+		});
 
+	if (removeIt != m_IndexBuffer.end())
+		m_IndexBuffer.erase(removeIt);
+
+	//Loop over all the indices and check if they're pointing to duplicate vertices
+	std::set<uint32_t> seenIndices{};
+	for (size_t i{}; i < m_IndexBuffer.size(); i++)
+	{
+		uint32_t index = m_IndexBuffer[i];
+		if (index >= m_VertexBuffer.size())
+			continue;
+
+		std::set<uint32_t>::iterator itFind = std::find(seenIndices.begin(), seenIndices.end(), index);
+		if (itFind != seenIndices.end())
+		{
+			int division = int(m_IndexBuffer.size()) / 10;
+			int result = i % division;
+			if (result == 1)
+			{
+				std::cout << "Optimizing Index Buffer: " << std::to_string(int(float(i) / m_IndexBuffer.size() * 100)) << "%\n";
+			}
+			continue;
+		}
+
+		VertexInput vertex = m_VertexBuffer[index];
+
+		auto CompareIndexVertex = [this, &vertex](uint32_t index)
+		{
+			return vertex == m_VertexBuffer[index];
+		};
+
+		std::vector<uint32_t> duplicates{};
+		std::vector<uint32_t>::iterator it = std::find_if(m_IndexBuffer.begin() + i, m_IndexBuffer.end(), CompareIndexVertex);
+
+		while (it != m_IndexBuffer.end())
+		{
+			duplicates.push_back(*it);
+			++it;
+			it = std::find_if(it, m_IndexBuffer.end(), CompareIndexVertex);
+		}
+
+		//Replace indices that are pointing to duplicates with one index
+		for (uint32_t duplicate : duplicates)
+		{
+			std::replace(m_IndexBuffer.begin() + i, m_IndexBuffer.end(), duplicate, index);
+		}
+		seenIndices.insert(index);
+
+		int division = int(m_IndexBuffer.size()) / 10;
+		int result = i % division;
+		if (result == 1)
+		{
+			std::cout << "Optimizing Index Buffer: " << std::to_string(int(float(i) / m_IndexBuffer.size() * 100)) << "%\n";
+		}
+	}
+	std::cout << "Finished Optimizing Index Buffer\n";
+}
+
+void Mesh::UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext)
+{
+	D3D11_MAPPED_SUBRESOURCE resource;
+	pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+	memcpy(resource.pData, m_VertexBuffer.data(), m_VertexBuffer.size() * sizeof(VertexInput));
+	pDeviceContext->Unmap(m_pVertexBuffer, 0);
+}
+
+void Mesh::PulseNeighbours(const VertexInput& vertex)
+{
+	for (uint32_t neighbourIndex : vertex.neighbourIndices)
+	{
+		VertexInput& neighbourVertex = m_VertexBuffer[neighbourIndex];
+		float distance = glm::distance(vertex.position, neighbourVertex.position);
+		neighbourVertex.timeBeforeActive = distance / neighbourVertex.PropogationSpeed;
+
+		m_NeighboursToUpdate.insert(&neighbourVertex);
+	}
+}
+
+void Mesh::CreateEffect(ID3D11Device* pDevice)
+{
 	m_pEffect = new BaseEffect(pDevice, L"Resources/Shader/PosCol.fx");
 }

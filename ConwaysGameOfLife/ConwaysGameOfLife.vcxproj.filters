@@ -157,11 +157,5 @@
     <FxCompile Include="Resources\Shader\PosCol.fx">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\PosColPixelShader.fx">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Resources\Shader\PosColVertexShader.fx">
-      <Filter>Shaders</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

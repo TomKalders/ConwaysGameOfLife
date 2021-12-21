@@ -23,7 +23,8 @@ DirectXRenderer::DirectXRenderer(HINSTANCE hInstance, const std::string& windowN
 	, m_WindowTitleWide(std::wstring{windowName.begin(), windowName.end()})
 	, m_Width(width)
 	, m_Height(height)
-    , m_pInputBuffer(new char[16])
+	, m_showWireframe(false)
+    , m_Index(0)
 {
     m_Instance = hInstance;
 }
@@ -141,11 +142,11 @@ void DirectXRenderer::Cleanup()
 		SDL_Quit();
     }
 
-    if (m_pInputBuffer)
-    {
-        delete m_pInputBuffer;
-    	m_pInputBuffer = nullptr;
-    }
+    //if (m_pInputBuffer)
+    //{
+    //    delete m_pInputBuffer;
+    //	m_pInputBuffer = nullptr;
+    //}
 }
 
 int DirectXRenderer::GetWindowWidth() const
@@ -329,7 +330,7 @@ HRESULT DirectXRenderer::CreateHandle()
     GetModuleFileName(NULL, szExePath, MAX_PATH);
 
     // If the icon is NULL, then use the first one found in the exe
-    if (hIcon == NULL)
+    if (hIcon == NULL && m_Instance != NULL)
         hIcon = ExtractIcon(m_Instance, szExePath, 0);
 
     // Register the windows class
@@ -439,6 +440,7 @@ void DirectXRenderer::RenderImGui()
     ImGui::NewFrame();
 
     ImGui::Begin("Data");
+    ImGui::BeginGroup();
     ImGui::DragFloat4("Lookat[0]", glm::value_ptr(m_pCamera->GetLookAt()[0]));
     ImGui::DragFloat4("Lookat[1]", glm::value_ptr(m_pCamera->GetLookAt()[1]));
     ImGui::DragFloat4("Lookat[2]", glm::value_ptr(m_pCamera->GetLookAt()[2]));
@@ -450,13 +452,95 @@ void DirectXRenderer::RenderImGui()
     ImGui::DragFloat4("Projection[1]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[1]));
     ImGui::DragFloat4("Projection[2]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[2]));
     ImGui::DragFloat4("Projection[3]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[3]));
+    ImGui::EndGroup();
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Spacing();
-    float power = m_pMeshes[0]->GetVertexBuffer()[0].power;
-    ImGui::DragFloat("Power", &power);
-    ImGui::End();
 
+    //Vertex Data
+    ImGui::LabelText("", "Vertex Data");
+    ImGui::Spacing();
+    ImGui::Text(("Amount of vertices to update: " + std::to_string(m_pMeshes[0]->GetVerticesToUpdate().size())).c_str());
+    ImGui::Spacing();
+    ImGui::DragInt("Vertex Index", &m_Index);
+    if (m_Index >= 0 && m_Index < m_pMeshes[0]->GetVertexBuffer().size())
+    {
+        auto vec3ToString = [](const glm::fvec3& vector)
+        {
+            std::string vecString{};
+            for (int i{}; i < 3; i++)
+            {
+                vecString += std::to_string(vector[i]) + " ";
+            }
+
+            return vecString;
+        };
+        auto vec2ToString = [](const glm::fvec2& vector)
+        {
+            std::string vecString{};
+            for (int i{}; i < 2; i++)
+            {
+                vecString += std::to_string(vector[i]) + " ";
+            }
+
+            return vecString;
+        };
+        auto indicesToString = [](const std::set<uint32_t>& indices)
+        {
+            std::string indicesString{};
+
+            for (uint32_t index : indices)
+            {
+                indicesString += std::to_string(index) + ", ";
+            }
+
+            return indicesString;
+        };
+
+        const VertexInput& vertex = m_pMeshes[0]->GetVertexBuffer()[m_Index];
+        ImGui::Text(("Position: " + vec3ToString(vertex.position)).c_str());
+        ImGui::Text(("Color: " + vec3ToString(vertex.color1)).c_str());
+        ImGui::Text(("Normal: " + vec3ToString(vertex.normal)).c_str());
+        ImGui::Text(("Tangent: " + vec3ToString(vertex.tangent)).c_str());
+        ImGui::Text(("UV: " + vec2ToString(vertex.uv)).c_str());
+        ImGui::Text(("Power: " + std::to_string(vertex.pulseStrength)).c_str());
+        ImGui::Text(("Neighbour Indices: " + indicesToString(vertex.neighbourIndices)).c_str());
+    }
+    else if (m_Index < 0)
+    {
+        m_Index = 0;
+    }
+    else
+    {
+        m_Index = int(m_pMeshes[0]->GetVertexBuffer().size()) - 1;
+    }
+    
+    if (ImGui::Button("Pulse Vertex"))
+    {
+        m_pMeshes[0]->PulseVertex(m_Index, m_pDeviceContext);
+    }
+    if (ImGui::Button("Pulse Mesh"))
+    {
+        m_pMeshes[0]->PulseMesh(m_pDeviceContext);
+    }
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::LabelText("", "Settings");
+    bool showWireframe = m_showWireframe;
+    if (ImGui::Checkbox("Show Wireframe", &m_showWireframe))
+    {
+        if (showWireframe != m_showWireframe)
+        {
+	        for (Mesh* mesh : m_pMeshes)
+	        {
+                mesh->SetWireframe(m_showWireframe);
+	        }
+        }
+    }
+
+    ImGui::End();
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
@@ -481,10 +565,6 @@ void DirectXRenderer::RenderMeshes() const
         mesh->Render(m_pDeviceContext, worldViewProjection, inverseView);
     }
 }
-
-
-
-
 
 //Example vertex and index buffer for reference
 

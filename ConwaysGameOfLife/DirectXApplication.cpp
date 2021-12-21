@@ -1,10 +1,16 @@
 #include "DirectXApplication.h"
 #include "DirectXRenderer.h"
-#include <chrono>
+
 #include "SDL.h"
 
+#include <chrono>
+#include <algorithm>
+//Undifine max macro becuase it interferes with the std::max() algorithm.
+#undef max
+
+
 DirectXApplication::DirectXApplication(HINSTANCE hInstance)
-	: Application(new DirectXRenderer{ hInstance, {"Conway's Game of Life: DirectX"}, 1820, 960 })
+	: Application(new DirectXRenderer{ hInstance, {"Heart Pulse Simulation: DirectX"}, 1820, 960 })
 {
 	UNREFERENCED_PARAMETER(hInstance);
 }
@@ -22,11 +28,32 @@ bool DirectXApplication::Initialize()
 
     if (m_pDirectXRenderer)
     {
-        Mesh* mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
+        //vertex 20093 is a vertex that can pbe pulsed for the body
+        bool useOtter = true;
+
+        Mesh* mesh = nullptr;
+        if (!useOtter)
+	        mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
+        else
+			mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Sea otter.obj" };
+
         m_pDirectXRenderer->AddMesh(mesh);
+        //auto vertexBuffer = mesh->GetVertexBuffer();
+        //if (vertexBuffer.size() > 0)
+        //{
+        //    vertexBuffer[0].color1 = { 1, 0, 0 };
+        //    mesh->SetVertexBuffer(m_pDirectXRenderer->GetDeviceContext(), vertexBuffer);
+        //}
     }
 
 	return true;
+}
+
+void DirectXApplication::PostInitialize()
+{
+    GetMeshNeighbours();
+    PerspectiveCamera* pCamera = m_pDirectXRenderer->GetCamera();
+    pCamera->SetMovementSpeed(5.f);
 }
 
 void DirectXApplication::HandleInput()
@@ -64,6 +91,16 @@ void DirectXApplication::HandleInput()
     {
         pCamera->RotateYaw(-pCamera->GetRotationSpeed() * m_DeltaTime);
     }
+    if (state[SDL_SCANCODE_UP])
+    {
+        glm::fvec3 upVector{ glm::fvec3{0, 1, 0} * pCamera->GetMovementSpeed() * m_DeltaTime };
+        pCamera->Translate(upVector);
+    }
+    if (state[SDL_SCANCODE_DOWN])
+    {
+        glm::fvec3 upVector{ glm::fvec3{0, 1, 0} *pCamera->GetMovementSpeed() * m_DeltaTime };
+        pCamera->Translate(-upVector);
+    }
 
     SDL_Event e;
     while (SDL_PollEvent(&e))
@@ -83,42 +120,64 @@ void DirectXApplication::Update(float deltaTime)
 {
     const std::vector<Mesh*>& meshes = m_pDirectXRenderer->GetMeshes();
 
-	for (Mesh* mesh : meshes)
-	{
-        std::vector<VertexInput> newVertices;
-		for (const VertexInput& vertex : mesh->GetVertexBuffer())
-		{
-            VertexInput newVertex{ vertex };
-            newVertex.power += deltaTime;
-			newVertex.color.r += deltaTime;
-
-			if (newVertex.power > 255.f)
-			{
-                newVertex.power = 0.f;
-			}
-            newVertices.push_back(newVertex);
-		}
-        mesh->SetVertexBuffer(m_pDirectXRenderer->GetDeviceContext(), newVertices);
-
-        //std::vector<float> newPowerValues{};
-        //const std::vector<float>& powerValues = mesh->GetPowerBuffer();
-        //newPowerValues.reserve(powerValues.size());
-
-        //for (int i{}; i < powerValues.size(); i++)
-        //{
-        //    float value = powerValues[i] + deltaTime;
-        //    if (value > 255.f)
-        //        value = 0;
-
-        //    newPowerValues.push_back(value);
-        //}
-
-        //mesh->SetPowerBuffer(m_pDirectXRenderer->GetDeviceContext(), newPowerValues);
-	}
+    for (Mesh* const mesh : meshes)
+    {
+	    if (mesh)
+	    {
+            mesh->UpdateMesh(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
+	    }
+    }
 }
 
 void DirectXApplication::Cleanup()
 {
 	m_pRenderer->Cleanup();
     delete m_pRenderer;
+}
+
+void DirectXApplication::GetMeshNeighbours()
+{
+    const std::vector<Mesh*>& meshes = m_pDirectXRenderer->GetMeshes();
+
+    for (Mesh* const mesh : meshes)
+    {
+        const std::vector<uint32_t>& indexBuffer = mesh->GetIndexBuffer();
+        std::vector<VertexInput> vertexBuffer = mesh->GetVertexBuffer();
+
+        for (uint32_t i{ 0 }; i < indexBuffer.size(); i++)
+        {
+            std::vector<uint32_t>::const_iterator it = std::find(indexBuffer.begin(), indexBuffer.end(), i);
+            while (it != indexBuffer.end())
+            {
+                uint32_t index = uint32_t(it - indexBuffer.begin());
+                int modulo = index % 3;
+                if (modulo == 0)
+                {
+                    if (it + 1 != indexBuffer.end())
+                        vertexBuffer[i].neighbourIndices.insert(*(it + 1));
+                    if (it + 2 != indexBuffer.end())
+                        vertexBuffer[i].neighbourIndices.insert(*(it + 2));
+                }
+                else if (modulo == 1)
+                {
+                    if (it - 1 != indexBuffer.end())
+                        vertexBuffer[i].neighbourIndices.insert(*(it - 1));
+                    if (it + 1 != indexBuffer.end())
+                        vertexBuffer[i].neighbourIndices.insert(*(it + 1));
+                }
+                else
+                {
+                    if (it - 1 != indexBuffer.end())
+                        vertexBuffer[i].neighbourIndices.insert(*(it - 1));
+                    if (it - 2 != indexBuffer.end())
+                        vertexBuffer[i].neighbourIndices.insert(*(it - 2));
+                }
+
+                it++;
+                it = std::find(it, indexBuffer.end(), i);
+            }
+        }
+
+        mesh->SetVertexBuffer(m_pDirectXRenderer->GetDeviceContext(), vertexBuffer);
+    }
 }

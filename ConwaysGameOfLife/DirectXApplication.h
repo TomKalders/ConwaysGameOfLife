@@ -15,10 +15,12 @@ public:
 
 private:
 	virtual bool Initialize() override;
+	virtual void PostInitialize() override;
 	virtual void HandleInput() override;
 	virtual void Update(float deltaTime) override;
 	virtual void Cleanup() override;
 
 	DirectXRenderer* m_pDirectXRenderer = nullptr;
+	void GetMeshNeighbours();
 };
 

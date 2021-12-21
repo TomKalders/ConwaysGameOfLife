@@ -31,6 +31,10 @@ bool SDL2Application::Initialize()
 	return true;
 }
 
+void SDL2Application::PostInitialize()
+{
+}
+
 void SDL2Application::Cleanup()
 {
 	m_pRenderer->Cleanup();
