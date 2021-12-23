@@ -21,6 +21,5 @@ private:
 	virtual void Cleanup() override;
 
 	DirectXRenderer* m_pDirectXRenderer = nullptr;
-	void GetMeshNeighbours();
 };
 

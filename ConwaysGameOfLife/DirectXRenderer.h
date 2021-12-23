@@ -48,6 +48,9 @@ public:
 	void AddMesh(Mesh* pMesh);
 	void RemoveMesh(Mesh* pmesh);
 
+	//Imgui
+	bool UseVersionOne();
+
 private:
 	//----- Handle -----
 	HRESULT CreateHandle();
@@ -81,9 +84,14 @@ private:
 	//------ IMGUI ------
 	bool InitializeImGui();
 	void RenderImGui();
+
+	bool m_UseVersionOne;
 	//-------------------
 
 	int m_Index;
+	//Mesh* initialMesh;
+	////std::vector<VertexInput>& m_InitialVertexBuffer;
+	//VertexInput initialVertex;
 	
 	PerspectiveCamera* m_pCamera = nullptr;
 	std::string m_WindowTitle;

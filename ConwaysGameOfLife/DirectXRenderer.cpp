@@ -17,14 +17,15 @@ HINSTANCE DirectXRenderer::m_Instance = NULL;
 std::wstring DirectXRenderer::m_ClassTitle = L"DefaultClass";
 
 DirectXRenderer::DirectXRenderer(HINSTANCE hInstance, const std::string& windowName, int width, int height)
-	: m_pCamera(new PerspectiveCamera{{0, 0, 10}, {0, 0, 1}, float(width)/float(height)})
+	: m_pCamera(new PerspectiveCamera{{0, 0, 3}, {0, 0, 1}, float(width)/float(height)})
 	, m_pWindow(nullptr)
 	, m_WindowTitle(windowName)
 	, m_WindowTitleWide(std::wstring{windowName.begin(), windowName.end()})
 	, m_Width(width)
 	, m_Height(height)
 	, m_showWireframe(false)
-    , m_Index(0)
+	, m_UseVersionOne(true)
+    , m_Index(20093)
 {
     m_Instance = hInstance;
 }
@@ -196,10 +197,15 @@ void DirectXRenderer::AddMesh(Mesh* pMesh)
 
 void DirectXRenderer::RemoveMesh(Mesh* pmesh)
 {
-    std::vector<Mesh*>::const_iterator it = std::find(m_pMeshes.begin(), m_pMeshes.end(), pmesh);
-    if (it != m_pMeshes.end())
+    if (pmesh)
     {
-        m_pMeshes.erase(it);
+        std::vector<Mesh*>::const_iterator it = std::find(m_pMeshes.begin(), m_pMeshes.end(), pmesh);
+        if (it != m_pMeshes.end())
+        {
+            m_pMeshes.erase(it);
+        }
+
+        delete pmesh;
     }
 }
 
@@ -430,6 +436,9 @@ bool DirectXRenderer::InitializeImGui()
     if (!ImGui_ImplDX11_Init(m_pDevice, m_pDeviceContext))
         return false;
 
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
     return true;
 }
 
@@ -439,110 +448,269 @@ void DirectXRenderer::RenderImGui()
     ImGui_ImplSDL2_NewFrame(m_pWindow);
     ImGui::NewFrame();
 
+    bool updateBuffer = false;
+
     ImGui::Begin("Data");
-    ImGui::BeginGroup();
-    ImGui::DragFloat4("Lookat[0]", glm::value_ptr(m_pCamera->GetLookAt()[0]));
-    ImGui::DragFloat4("Lookat[1]", glm::value_ptr(m_pCamera->GetLookAt()[1]));
-    ImGui::DragFloat4("Lookat[2]", glm::value_ptr(m_pCamera->GetLookAt()[2]));
-    ImGui::DragFloat4("Lookat[3]", glm::value_ptr(m_pCamera->GetLookAt()[3]));
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::DragFloat4("Projection[0]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[0]));
-    ImGui::DragFloat4("Projection[1]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[1]));
-    ImGui::DragFloat4("Projection[2]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[2]));
-    ImGui::DragFloat4("Projection[3]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[3]));
-    ImGui::EndGroup();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Spacing();
+    //Framerate counter
+    ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+    if (ImGui::CollapsingHeader("Matrices"))
+    {
+        ImGui::BeginGroup();
+        ImGui::DragFloat4("Lookat[0]", glm::value_ptr(m_pCamera->GetLookAt()[0]));
+        ImGui::DragFloat4("Lookat[1]", glm::value_ptr(m_pCamera->GetLookAt()[1]));
+        ImGui::DragFloat4("Lookat[2]", glm::value_ptr(m_pCamera->GetLookAt()[2]));
+        ImGui::DragFloat4("Lookat[3]", glm::value_ptr(m_pCamera->GetLookAt()[3]));
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::DragFloat4("Projection[0]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[0]));
+        ImGui::DragFloat4("Projection[1]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[1]));
+        ImGui::DragFloat4("Projection[2]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[2]));
+        ImGui::DragFloat4("Projection[3]", glm::value_ptr(m_pCamera->GetProjectionMatrix()[3]));
+        ImGui::EndGroup();
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
+    }
 
     //Vertex Data
-    ImGui::LabelText("", "Vertex Data");
-    ImGui::Spacing();
-    ImGui::Text(("Amount of vertices to update: " + std::to_string(m_pMeshes[0]->GetVerticesToUpdate().size())).c_str());
-    ImGui::Spacing();
-    ImGui::DragInt("Vertex Index", &m_Index);
-    if (m_Index >= 0 && m_Index < m_pMeshes[0]->GetVertexBuffer().size())
+    if (ImGui::CollapsingHeader("Vertex Data"))
     {
-        auto vec3ToString = [](const glm::fvec3& vector)
+        if (m_pMeshes.size() > 0 && m_pMeshes[0]->GetVertexBuffer().size() > 0 &&
+            m_Index >= 0 && m_Index < m_pMeshes[0]->GetVertexBuffer().size())
         {
-            std::string vecString{};
-            for (int i{}; i < 3; i++)
+            Mesh* pMesh = m_pMeshes[0];
+            std::vector<VertexInput>& vertexBuffer = pMesh->GetVertexBufferReference();
+            VertexInput initialVertex = vertexBuffer[m_Index];
+
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            //Color Tab
+            bool open = true;
+            ImGui::Begin("Color", &open);
+            const float* data = value_ptr(initialVertex.color1);
+            float color1[3] = { (data)[0], (data)[1], (data)[2] };
+            if (ImGui::ColorPicker3("Start Color", color1))
             {
-                vecString += std::to_string(vector[i]) + " ";
+                if (color1[0] != data[0] || color1[1] != data[1] || color1[2] != data[2])
+                {
+                    initialVertex.color1 = glm::fvec3{ color1[0], color1[1], color1[2] };
+                    updateBuffer = true;
+                }
             }
 
-            return vecString;
-        };
-        auto vec2ToString = [](const glm::fvec2& vector)
-        {
-            std::string vecString{};
-            for (int i{}; i < 2; i++)
+            data = value_ptr(initialVertex.color2);
+            float color2[3] = { (data)[0], (data)[1], (data)[2] };
+            if (ImGui::ColorPicker3("Pulse Color", color2))
             {
-                vecString += std::to_string(vector[i]) + " ";
+                if (color2[0] != data[0] || color2[1] != data[1] || color2[2] != data[2])
+                {
+                    initialVertex.color2 = glm::fvec3{ color2[0], color2[1], color2[2] };
+                    updateBuffer = true;
+                }
+            }
+            ImGui::End();
+
+            //Vertex Data
+            ImGui::Text(("Amount of vertices : " + std::to_string(vertexBuffer.size())).c_str());
+            ImGui::Text(("Amount of vertices to update: " + std::to_string(pMesh->GetVerticesToUpdate().size())).c_str());
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::InputInt("Vertex Index", &m_Index);
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            auto vec3ToString = [](const glm::fvec3& vector)
+            {
+                std::string vecString{};
+                for (int i{}; i < 3; i++)
+                {
+                    vecString += std::to_string(vector[i]) + " ";
+                }
+
+                return vecString;
+            };
+            auto vec2ToString = [](const glm::fvec2& vector)
+            {
+                std::string vecString{};
+                for (int i{}; i < 2; i++)
+                {
+                    vecString += std::to_string(vector[i]) + " ";
+                }
+
+                return vecString;
+            };
+            auto indicesToString = [](const std::set<uint32_t>& indices)
+            {
+                std::string indicesString{};
+
+                for (uint32_t index : indices)
+                {
+                    indicesString += std::to_string(index) + ", ";
+                }
+
+                return indicesString;
+            };
+
+            ImGui::Text(("Position: " + vec3ToString(initialVertex.position)).c_str());
+            ImGui::Text(("Color: " + vec3ToString(initialVertex.color1)).c_str());
+            ImGui::Text(("Normal: " + vec3ToString(initialVertex.normal)).c_str());
+            ImGui::Text(("Tangent: " + vec3ToString(initialVertex.tangent)).c_str());
+            ImGui::Text(("UV: " + vec2ToString(initialVertex.uv)).c_str());
+            ImGui::Text(("Power: " + std::to_string(initialVertex.pulseStrength)).c_str());
+            ImGui::Text(("Neighbour Indices: " + indicesToString(initialVertex.neighbourIndices)).c_str());
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            float propSpeed = initialVertex.propogationSpeed;
+            ImGui::InputFloat("Propogation Speed", &propSpeed);
+            if (abs(propSpeed - initialVertex.propogationSpeed) > 0.001f)
+            {
+                initialVertex.propogationSpeed = propSpeed;
+                updateBuffer = true;
+            }
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            bool useVersion = m_UseVersionOne;
+            if (ImGui::Checkbox("Use Version One", &m_UseVersionOne))
+            {
+                if (useVersion != m_UseVersionOne)
+                {
+                    pMesh->ClearPulse(m_pDeviceContext);
+                }
+            }
+            if (ImGui::Button("Pulse Vertex"))
+            {
+                if (m_UseVersionOne)
+	                pMesh->PulseVertex(m_Index, m_pDeviceContext);
+                else
+                    pMesh->PulseVertexV2(m_Index, m_pDeviceContext);
+            }
+            if (ImGui::Button("Pulse Mesh"))
+            {
+                pMesh->PulseMesh(m_pDeviceContext);
             }
 
-            return vecString;
-        };
-        auto indicesToString = [](const std::set<uint32_t>& indices)
-        {
-            std::string indicesString{};
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
 
-            for (uint32_t index : indices)
+            if (ImGui::Button("Clear All Pulses"))
             {
-                indicesString += std::to_string(index) + ", ";
+                pMesh->ClearPulse(m_pDeviceContext);
             }
 
-            return indicesString;
-        };
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::LabelText("", "Settings");
 
-        const VertexInput& vertex = m_pMeshes[0]->GetVertexBuffer()[m_Index];
-        ImGui::Text(("Position: " + vec3ToString(vertex.position)).c_str());
-        ImGui::Text(("Color: " + vec3ToString(vertex.color1)).c_str());
-        ImGui::Text(("Normal: " + vec3ToString(vertex.normal)).c_str());
-        ImGui::Text(("Tangent: " + vec3ToString(vertex.tangent)).c_str());
-        ImGui::Text(("UV: " + vec2ToString(vertex.uv)).c_str());
-        ImGui::Text(("Power: " + std::to_string(vertex.pulseStrength)).c_str());
-        ImGui::Text(("Neighbour Indices: " + indicesToString(vertex.neighbourIndices)).c_str());
-    }
-    else if (m_Index < 0)
-    {
-        m_Index = 0;
-    }
-    else
-    {
-        m_Index = int(m_pMeshes[0]->GetVertexBuffer().size()) - 1;
-    }
-    
-    if (ImGui::Button("Pulse Vertex"))
-    {
-        m_pMeshes[0]->PulseVertex(m_Index, m_pDeviceContext);
-    }
-    if (ImGui::Button("Pulse Mesh"))
-    {
-        m_pMeshes[0]->PulseMesh(m_pDeviceContext);
-    }
+            //Camera speed
+            float cameraSpeed = m_pCamera->GetMovementSpeed();
+            ImGui::InputFloat("Movement Speed", &cameraSpeed);
+            if (abs(cameraSpeed - m_pCamera->GetMovementSpeed()) > 0.001f)
+            {
+                m_pCamera->SetMovementSpeed(cameraSpeed);
+            }
 
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::Spacing();
-    ImGui::LabelText("", "Settings");
-    bool showWireframe = m_showWireframe;
-    if (ImGui::Checkbox("Show Wireframe", &m_showWireframe))
-    {
-        if (showWireframe != m_showWireframe)
+            //Wireframe toggle
+            bool showWireframe = m_showWireframe;
+            if (ImGui::Checkbox("Show Wireframe", &m_showWireframe))
+            {
+                if (showWireframe != m_showWireframe)
+                {
+                    for (Mesh* mesh : m_pMeshes)
+                    {
+                        mesh->SetWireframe(m_showWireframe);
+                    }
+                }
+            }
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            if (updateBuffer)
+            {
+                for (VertexInput& vertex : vertexBuffer)
+                {
+                    vertex.propogationSpeed = initialVertex.propogationSpeed;
+                    vertex.color1 = initialVertex.color1;
+                    vertex.color2 = initialVertex.color2;
+                }
+
+                pMesh->UpdateVertexBuffer(m_pDeviceContext);
+            }
+
+            ImGui::PushStyleColor(ImGuiCol_Button, { 158 / 255.f, 21 / 255.f, 27 / 255.f, 1 });
+            //Load different mesh
+            if (ImGui::Button("Unload Mesh"))
+            {
+                RemoveMesh(pMesh);
+            }
+            ImGui::PopStyleColor();
+        }
+        else if (m_pMeshes.empty())
         {
-	        for (Mesh* mesh : m_pMeshes)
-	        {
-                mesh->SetWireframe(m_showWireframe);
-	        }
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, { 158 / 255.f, 21 / 255.f, 27 / 255.f, 1 });
+            ImGui::Text("No Mesh Loaded");
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            if (ImGui::Button("Load Torus Mesh"))
+            {
+                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/Torus.obj" };
+                AddMesh(mesh);
+            }
+            if (ImGui::Button("Load Otter Mesh"))
+            {
+                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/Sea otter.obj" };
+                AddMesh(mesh);
+            }
+            if (ImGui::Button("Load Heart Mesh"))
+            {
+                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/Heart.obj" };
+                AddMesh(mesh);
+            }
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+        }
+        else if (m_Index < 0)
+        {
+            m_Index = 0;
+        }
+        else if (m_Index > m_pMeshes[0]->GetVertexBuffer().size())
+        {
+            m_Index = int(m_pMeshes[0]->GetVertexBuffer().size()) - 1;
+        }
+        else
+        {
+            if (m_pMeshes.size() > 0)
+                m_Index = int(m_pMeshes[0]->GetVertexBuffer().size()) - 1;
         }
     }
 
     ImGui::End();
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+bool DirectXRenderer::UseVersionOne()
+{
+    return m_UseVersionOne;
 }
 
 void DirectXRenderer::RenderMeshes() const

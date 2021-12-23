@@ -153,9 +153,4 @@
       <Filter>3rdParty\ImGui</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Resources\Shader\PosCol.fx">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-  </ItemGroup>
 </Project>

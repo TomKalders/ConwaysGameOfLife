@@ -29,21 +29,33 @@ bool DirectXApplication::Initialize()
     if (m_pDirectXRenderer)
     {
         //vertex 20093 is a vertex that can pbe pulsed for the body
-        bool useOtter = true;
 
-        Mesh* mesh = nullptr;
-        if (!useOtter)
-	        mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
-        else
-			mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Sea otter.obj" };
-
-        m_pDirectXRenderer->AddMesh(mesh);
-        //auto vertexBuffer = mesh->GetVertexBuffer();
-        //if (vertexBuffer.size() > 0)
+        //enum MeshType
         //{
-        //    vertexBuffer[0].color1 = { 1, 0, 0 };
-        //    mesh->SetVertexBuffer(m_pDirectXRenderer->GetDeviceContext(), vertexBuffer);
+	       // Torus,
+        //    Otter,
+        //    Heart
+        //};
+        //MeshType meshType = MeshType::Heart;
+        //Mesh* mesh = nullptr;
+
+        //switch (meshType)
+        //{
+        //case Torus:
+        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
+        //    break;
+        //case Otter:	
+        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Sea otter.obj" };
+        //    break;
+        //case Heart:
+        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Heart.obj" };
+        //    break;
+        //default:
+        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
+        //    break;
         //}
+
+        //m_pDirectXRenderer->AddMesh(mesh);
     }
 
 	return true;
@@ -51,9 +63,8 @@ bool DirectXApplication::Initialize()
 
 void DirectXApplication::PostInitialize()
 {
-    GetMeshNeighbours();
     PerspectiveCamera* pCamera = m_pDirectXRenderer->GetCamera();
-    pCamera->SetMovementSpeed(5.f);
+    pCamera->SetMovementSpeed(2.f);
 }
 
 void DirectXApplication::HandleInput()
@@ -102,18 +113,31 @@ void DirectXApplication::HandleInput()
         pCamera->Translate(-upVector);
     }
 
+
     SDL_Event e;
+
     while (SDL_PollEvent(&e))
     {
-        switch (e.type)
+        if (ImGui::GetIO().WantCaptureKeyboard)
         {
-        case SDL_QUIT:
-            //If the close button on the window is hit, exit the application
-            DirectXApplication::QuitApplication();
-            break;
+            ImGui_ImplSDL2_ProcessEvent(&e);
         }
+        //else
+        //{
+        //    switch (e.type)
+        //    {
+        //    case SDL_QUIT:
+        //        //If the close button on the window is hit, exit the application
+        //        DirectXApplication::QuitApplication();
+        //        break;
+        //    default:
+        //        break;
+        //    }
+        //}
+
+        if (e.type == SDL_QUIT)
+            DirectXApplication::QuitApplication();
     }
-	
 }
 
 void DirectXApplication::Update(float deltaTime)
@@ -124,7 +148,14 @@ void DirectXApplication::Update(float deltaTime)
     {
 	    if (mesh)
 	    {
-            mesh->UpdateMesh(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
+            if (m_pDirectXRenderer->UseVersionOne())
+            {
+                mesh->UpdateMesh(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
+            }
+            else
+            {
+                mesh->UpdateMeshV2(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
+            }
 	    }
     }
 }
@@ -133,51 +164,4 @@ void DirectXApplication::Cleanup()
 {
 	m_pRenderer->Cleanup();
     delete m_pRenderer;
-}
-
-void DirectXApplication::GetMeshNeighbours()
-{
-    const std::vector<Mesh*>& meshes = m_pDirectXRenderer->GetMeshes();
-
-    for (Mesh* const mesh : meshes)
-    {
-        const std::vector<uint32_t>& indexBuffer = mesh->GetIndexBuffer();
-        std::vector<VertexInput> vertexBuffer = mesh->GetVertexBuffer();
-
-        for (uint32_t i{ 0 }; i < indexBuffer.size(); i++)
-        {
-            std::vector<uint32_t>::const_iterator it = std::find(indexBuffer.begin(), indexBuffer.end(), i);
-            while (it != indexBuffer.end())
-            {
-                uint32_t index = uint32_t(it - indexBuffer.begin());
-                int modulo = index % 3;
-                if (modulo == 0)
-                {
-                    if (it + 1 != indexBuffer.end())
-                        vertexBuffer[i].neighbourIndices.insert(*(it + 1));
-                    if (it + 2 != indexBuffer.end())
-                        vertexBuffer[i].neighbourIndices.insert(*(it + 2));
-                }
-                else if (modulo == 1)
-                {
-                    if (it - 1 != indexBuffer.end())
-                        vertexBuffer[i].neighbourIndices.insert(*(it - 1));
-                    if (it + 1 != indexBuffer.end())
-                        vertexBuffer[i].neighbourIndices.insert(*(it + 1));
-                }
-                else
-                {
-                    if (it - 1 != indexBuffer.end())
-                        vertexBuffer[i].neighbourIndices.insert(*(it - 1));
-                    if (it - 2 != indexBuffer.end())
-                        vertexBuffer[i].neighbourIndices.insert(*(it - 2));
-                }
-
-                it++;
-                it = std::find(it, indexBuffer.end(), i);
-            }
-        }
-
-        mesh->SetVertexBuffer(m_pDirectXRenderer->GetDeviceContext(), vertexBuffer);
-    }
 }

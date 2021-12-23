@@ -1,9 +1,9 @@
 #pragma once
 #include "glm.hpp"
 #include "BaseEffect.h"
-#include "regex"
 
 #include <set>
+#include <map>
 #include <vector>
 
 #pragma warning(push)
@@ -18,7 +18,8 @@ struct VertexInput
 		const glm::fvec3& color1,
 		const glm::fvec3& color2,
 		const glm::fvec3& normal,
-		const glm::fvec2& uv)
+		const glm::fvec2& uv,
+		uint32_t index)
 		: position(position)
 		, color1(color1)
 		, color2(color2)
@@ -26,9 +27,25 @@ struct VertexInput
 		, uv(uv)
 		, tangent({0, 0, 0})
 		, pulseStrength(0.f)
-		, PropogationSpeed(5.f)
-		, timeBeforeActive(0.f)
+		, index(index)
+		, propogationSpeed(1.f)
+		, timeToTravel(0.f)
 		, neighbourIndices({})
+	{
+	}
+
+	VertexInput()
+		: position{}
+		, color1{}
+		, color2{}
+		, normal{}
+		, uv{}
+		, tangent{}
+		, pulseStrength{}
+		, index{}
+		, propogationSpeed{}
+		, timeToTravel{}
+		, neighbourIndices{}
 	{
 	}
 
@@ -41,9 +58,10 @@ struct VertexInput
 	glm::fvec2 uv;
 	float pulseStrength;
 
-	//this member variable not part of the input layout
-	float PropogationSpeed;
-	float timeBeforeActive;
+	//these member variables are not part of the input layout
+	uint32_t index;
+	float propogationSpeed;
+	float timeToTravel;
 	std::set<uint32_t> neighbourIndices;
 
 	//Operator overloading
@@ -56,9 +74,12 @@ struct VertexInput
 	{
 		return rhs.position == lhs.position;
 	}
+
+	bool IsPulsed()
+	{
+		return pulseStrength >= 0.3f;
+	}
 };
-
-
 
 class Mesh
 {
@@ -72,21 +93,33 @@ public:
 	~Mesh();
 
 	void Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewProjMatrix, const float* inverseView);
+	void UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext);
+
 	void UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime);
+	void UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime);
+
 	void PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
 	void PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+
+	void PulseVertexV2(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+	void PulseVertexV2(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+
 	void PulseMesh(ID3D11DeviceContext* pDeviceContext);
+	void ClearPulse(ID3D11DeviceContext* pDeviceContext);
 
 	glm::mat4 GetWorldMatrix();
 	const std::vector<uint32_t>& GetIndexBuffer();
 	const std::vector<VertexInput>& GetVertexBuffer();
+	std::vector<VertexInput>& GetVertexBufferReference();
 	const std::set<VertexInput*>& GetVerticesToUpdate();
 
 	void SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer);
 	void SetWireframe(bool enabled);
 
 private:
-	//			DirectX				//
+	Mesh();
+
+	//----- DirectX -----
 	BaseEffect* m_pEffect;
 	ID3D11InputLayout* m_pVertexLayout;
 	ID3D11Buffer* m_pVertexBuffer;
@@ -96,19 +129,25 @@ private:
 	bool m_WireFrameEnabled;
 
 	uint32_t m_AmountIndices;
-	//////////////////////////////////
+	//-------------------
+
+	//Initialization of mesh
+	void LoadMeshFromOBJ(const std::string& pathName);
+	void CalculateTangents();
+	void OptimizeIndexBuffer();
+	void OptimizeVertexBuffer();
+	void GetNeighbours();
+
+	//Vertex Data
+	void PulseNeighbours(const VertexInput& vertex);
+	bool IsAnyNeighbourActive(const VertexInput& vertex);
 
 	glm::mat4 m_WorldMatrix;
-
-	void LoadMeshFromOBJ(const std::string& pathName);
-	void OptimizeIndexBuffer();
-	void UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext);
-
-	void PulseNeighbours(const VertexInput& vertex);
 	std::vector<uint32_t> m_IndexBuffer;
 	std::vector<VertexInput> m_VertexBuffer;
 	std::set<VertexInput*> m_VerticesToUpdate;
 	std::set<VertexInput*> m_NeighboursToUpdate;
+	std::map<VertexInput*, float> m_VerticesToUpdateV2;
 
 	HRESULT CreateDirectXResources(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices);
 	void CreateEffect(ID3D11Device* pDevice);
