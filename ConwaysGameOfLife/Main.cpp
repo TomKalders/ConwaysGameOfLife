@@ -80,6 +80,7 @@ void CreateApplication(HINSTANCE hInstance)
 	catch (std::exception exception)
 	{
 		std::cout << exception.what() << std::endl;
+		std::cin.get();
 	}
 
 	delete app;

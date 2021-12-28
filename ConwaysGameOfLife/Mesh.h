@@ -12,6 +12,12 @@
 #include <gtc/type_ptr.hpp>
 #pragma warning(pop)
 
+enum FileType
+{
+	OBJ,
+	VTK
+};
+
 struct VertexInput
 {
 	VertexInput(const glm::fvec3& position,
@@ -36,11 +42,11 @@ struct VertexInput
 
 	VertexInput()
 		: position{}
-		, color1{}
-		, color2{}
-		, normal{}
+		, color1{1, 1, 1}
+		, color2{0, 0, 0}
+		, normal{1, 0, 0}
 		, uv{}
-		, tangent{}
+		, tangent{1, 0, 0}
 		, pulseStrength{}
 		, index{}
 		, propogationSpeed{}
@@ -85,7 +91,7 @@ class Mesh
 {
 public:
 	Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices);
-	Mesh(ID3D11Device* pDevice, const std::string& filepath);
+	Mesh(ID3D11Device* pDevice, const std::string& filepath, bool skipOptimization = false, FileType fileType = FileType::OBJ, int nrOfThreads = 1);
 	Mesh(const Mesh& other) = delete;
 	Mesh(Mesh&& other) = delete;
 	Mesh& operator=(const Mesh& other) = delete;
@@ -116,6 +122,10 @@ public:
 	void SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer);
 	void SetWireframe(bool enabled);
 
+	glm::fvec3 GetScale();
+	void SetScale(const glm::fvec3& scale);
+	void SetScale(float x, float y, float z);
+
 private:
 	Mesh();
 
@@ -132,11 +142,14 @@ private:
 	//-------------------
 
 	//Initialization of mesh
-	void LoadMeshFromOBJ(const std::string& pathName);
+	void LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads = 1);
+	void LoadMeshFromVTK(const std::string& pathName);
 	void CalculateTangents();
 	void OptimizeIndexBuffer();
 	void OptimizeVertexBuffer();
-	void GetNeighbours();
+	void GetNeighbours(int nrOfThreads = 1);
+
+	bool m_SkipOptimization;
 
 	//Vertex Data
 	void PulseNeighbours(const VertexInput& vertex);

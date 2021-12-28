@@ -92,6 +92,11 @@ StyleCopReport.xml
 *.svclog
 *.scc
 
+#mesh files
+*.elem
+*.surf
+*.pts
+
 # Chutzpah Test files
 _Chutzpah*
 
@@ -347,3 +352,6 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+ConwaysGameOfLife/Resources/Models/Heart.obj
+ConwaysGameOfLife/Resources/Models/HeartLarge.obj

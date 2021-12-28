@@ -1,8 +1,11 @@
 #include "Mesh.h"
 
 #include <algorithm>
+#include <fstream>
+#include <chrono>
+#include <thread>
 
-//External Header
+//External Headers
 #pragma warning(push)
 #pragma warning(disable:4244)
 #pragma warning(disable:4701)
@@ -30,11 +33,22 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, cons
 	CreateDirectXResources(pDevice, vertices, indices);
 }
 
-Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath)
+Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath, bool skipOptimization, FileType fileType, int nrOfThreads)
 	: Mesh()
 {
+	m_SkipOptimization = skipOptimization;
 	CreateEffect(pDevice);
-	LoadMeshFromOBJ(filepath);
+
+	switch (fileType)
+	{
+	case FileType::OBJ:
+		LoadMeshFromOBJ(filepath, nrOfThreads);
+		break;
+	case FileType::VTK:
+		LoadMeshFromVTK(filepath);
+		break;
+	}
+
 	CreateDirectXResources(pDevice, m_VertexBuffer, m_IndexBuffer);
 }
 
@@ -86,16 +100,14 @@ void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewPro
 
 	//Set the worldMatrix
 	glm::mat4 world = glm::transpose(m_WorldMatrix);
-	//glm::mat4 world = m_WorldMatrix;
-	
-	//float* data = (float*)(world[0].x);
+
 	float* data = (float*)glm::value_ptr(world);
 	m_pEffect->GetWorldMatrix()->SetMatrix(data);
 
 	//Set the InverseViewMatrix
 	m_pEffect->GetViewInverseMatrix()->SetMatrix(inverseView);
 
-	//Render triangle
+	//Render mesh
 	D3DX11_TECHNIQUE_DESC techDesc;
 	m_pEffect->GetTechnique()->GetDesc(&techDesc);
 	for (UINT p = 0; p < techDesc.Passes; ++p)
@@ -141,8 +153,28 @@ void Mesh::SetWireframe(bool enabled)
 	m_WireFrameEnabled = enabled;
 }
 
+glm::fvec3 Mesh::GetScale()
+{
+	return glm::fvec3{ m_WorldMatrix[0].x, m_WorldMatrix[1].y , m_WorldMatrix[2].z };
+}
+
+void Mesh::SetScale(const glm::fvec3& scale)
+{
+	SetScale(scale.x, scale.y, scale.z);
+}
+
+void Mesh::SetScale(float x, float y, float z)
+{
+	m_WorldMatrix[0].x = x;
+	m_WorldMatrix[1].y = y;
+	m_WorldMatrix[2].z = z;
+}
+
 void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 {
+	if (m_VerticesToUpdate.empty() && m_NeighboursToUpdate.empty())
+		return;
+
 	//Loop over all the vertices that have a pulse going through and update them
 	//If the pulse zeros out, mark them to remove them from the list.
 	std::vector<VertexInput*> verticesToRemove{};
@@ -386,10 +418,10 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 
 	//Create index buffer
 	m_AmountIndices = (uint32_t)indices.size();
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = D3D11_USAGE_IMMUTABLE;
 	bd.ByteWidth = sizeof(uint32_t) * m_AmountIndices;
 	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
 	initData.pSysMem = indices.data();
 	result = pDevice->CreateBuffer(&bd, &initData, &m_pIndexBuffer);
@@ -417,10 +449,12 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 	return result;
 }
 
-void Mesh::LoadMeshFromOBJ(const std::string& pathName)
+void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
 {
+	auto timeStart = std::chrono::high_resolution_clock::now();
+
 	std::cout << "\n[Started Loading Mesh]\n";
-	std::cout << "\nStarted Reading Mesh File\n";
+	std::cout << "\n--- Started Reading Mesh File ---\n";
 	objl::Loader loader;
 
 	bool loadout = loader.LoadFile(pathName);
@@ -450,28 +484,135 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName)
 			{
 				m_IndexBuffer.push_back(index);
 			}
-			std::cout << "Finished Reading Mesh File\n";
+			std::cout << "--- Finished Reading Mesh File ---\n";
+			std::cout << m_VertexBuffer.size() << " Vertices Read\n";
+			std::cout << m_IndexBuffer.size() << " Indices Read\n";
 
 			//Remove indices pointing towards duplicate vertices
-			OptimizeIndexBuffer();
+			if (!m_SkipOptimization)
+				OptimizeIndexBuffer();
 
 			//Calculate the tangents
 			CalculateTangents();
 
 			//Remove the duplicate vertices from the vertex buffer
-			std::cout << "\nStarted Optimizing Vertex Buffer\n";
-			OptimizeVertexBuffer();
-			std::cout << "Finished Optimizing Vertex Buffer\n";
+			if (!m_SkipOptimization)
+			{
+				std::cout << "\n--- Started Optimizing Vertex Buffer ---\n";
+				OptimizeVertexBuffer();
+				std::cout << "--- Finished Optimizing Vertex Buffer ---\n";
+			}
 
 			//Get the neighbour of every vertex
-			std::cout << "\nStarted Calculating Vertex Neighbours\n";
-			GetNeighbours();
-			std::cout << "Finished Calculating Vertex Neighbours\n";
+			std::cout << "\n--- Started Calculating Vertex Neighbours ---\n";
+			GetNeighbours(nrOfThreads);
+			std::cout << "--- Finished Calculating Vertex Neighbours ---\n";
 
-			std::cout << "\n[Finished Loading Mesh]\n\n";
+			std::cout << m_VertexBuffer.size() << " Vertices After Optimization\n";
+			std::cout << m_IndexBuffer.size() << " Indices After Optimization\n";
+
+			auto timeEnd = std::chrono::high_resolution_clock::now();
+			auto time = timeEnd - timeStart;
+			auto seconds = std::chrono::duration_cast<std::chrono::seconds>(time);
+			std::cout << "\n[Finished Loading Mesh]\n";
+			std::cout << "[Loaded In " << seconds.count() << " Seconds]\n";
+
 		}
 	}
 
+}
+
+void Mesh::LoadMeshFromVTK(const std::string& pathName)
+{
+	std::cout << "\n[Started Reading Mesh]\n";
+	size_t pos = pathName.find('.');
+	std::string path = pathName.substr(0, pos);
+
+	std::map<uint32_t, uint32_t> indicesToReplace{};
+
+	std::string ptsFilePath = path + ".pts";
+	std::ifstream vertexStream{ ptsFilePath };
+	if (vertexStream.is_open())
+	{
+		std::string line{};
+		std::getline(vertexStream, line);
+		size_t vertCount = std::stoi(line);
+		m_VertexBuffer.resize(vertCount);
+
+		int index = 0;
+		while (!vertexStream.eof())
+		{
+			if (index >= vertCount)
+				break;
+
+			VertexInput vertex{};
+			vertex.index = index;
+
+			vertexStream >> vertex.position.x >> vertex.position.y >> vertex.position.z;
+
+			vertex.position /= 1000.f;
+			m_VertexBuffer[index] = vertex;
+			++index;
+		}
+
+		std::string elemFilePath = path + ".surf";
+		std::string discardValue{};
+
+		std::ifstream indexStream{ elemFilePath };
+		if (indexStream.is_open())
+		{
+			while (!indexStream.eof())
+			{
+				std::getline(indexStream, line, ' ');
+				std::cout << line << "\n";
+
+				if (line.empty() || line == "\n")
+					break;
+
+
+				size_t indexCount = std::stoi(line);
+				std::getline(indexStream, line);
+				m_IndexBuffer.resize(m_IndexBuffer.size() + indexCount);
+
+				for (int i{}; i < indexCount; i++)
+				{
+					glm::ivec3 indices{};
+					indexStream >> discardValue >> indices.x >> indices.y >> indices.z;
+
+					for (int j{}; j < 3; j++)
+					{
+						m_IndexBuffer[i] = indices[j];
+					}
+				}
+			}
+		}
+
+		std::cout << "Vertex Buffer Size: " << m_VertexBuffer.size() << "\n";
+		std::cout << "Index Buffer Size: " << m_IndexBuffer.size() << "\n";
+		std::cout << "\n[Finished Reading Mesh]\n";
+		//for (uint32_t i{}; i < m_IndexBuffer.size(); i+= 3)
+		//{
+		//	uint32_t index1 = m_IndexBuffer[i];
+		//	uint32_t index2 = m_IndexBuffer[i + 1];
+		//	uint32_t index3 = m_IndexBuffer[i + 2];
+
+		//	VertexInput& vertex1 = m_VertexBuffer[index1];
+		//	VertexInput& vertex2 = m_VertexBuffer[index2];
+		//	VertexInput& vertex3 = m_VertexBuffer[index3];
+
+		//	glm::fvec3 normal = (glm::cross(vertex2.position - vertex1.position, vertex3.position - vertex1.position));
+		//	normal = glm::normalize(normal);
+		//	vertex1.normal = normal;
+		//	vertex2.normal = normal;
+		//	vertex3.normal = normal;
+
+		//	if (vertex1.index == 0 || vertex2.index == 0 || vertex3.index == 0)
+		//		std::cout << normal.x << ", " << normal.y << ", " << normal.z << "\n";
+		//}
+
+		indexStream.close();
+		vertexStream.close();
+	}
 }
 
 void Mesh::CalculateTangents()
@@ -511,7 +652,7 @@ void Mesh::CalculateTangents()
 
 void Mesh::OptimizeIndexBuffer()
 {
-	std::cout << "Started Optimizing Index Buffer\n";
+	std::cout << "--- Started Optimizing Index Buffer ---\n";
 	//Get rid of out of bounds indices
 	std::vector<uint32_t>::iterator removeIt = std::remove_if(m_IndexBuffer.begin(), m_IndexBuffer.end(), [this](uint32_t index)
 		{
@@ -572,11 +713,12 @@ void Mesh::OptimizeIndexBuffer()
 			std::cout << "Optimizing Index Buffer: " << std::to_string(int(float(i) / m_IndexBuffer.size() * 100)) << "%\n";
 		}
 	}
-	std::cout << "Finished Optimizing Index Buffer\n";
+	std::cout << "--- Finished Optimizing Index Buffer ---\n";
 }
 
 void Mesh::OptimizeVertexBuffer()
 {
+	std::cout << "Removing Duplicate Indices\n";
 	std::vector<uint32_t> indicesToRemove{};
 	std::vector<VertexInput>::iterator it = std::remove_if(m_VertexBuffer.begin(), m_VertexBuffer.end(), [&indicesToRemove, this](const VertexInput& vertex)
 		{
@@ -591,6 +733,7 @@ void Mesh::OptimizeVertexBuffer()
 
 	m_VertexBuffer.erase(it, m_VertexBuffer.end());
 
+	std::cout << "Reconstructing Index Buffer\n";
 	std::vector<uint32_t> indexBufferSwap{m_IndexBuffer};
 	for (uint32_t i{}; i < indicesToRemove.size(); i++)
 	{
@@ -605,6 +748,7 @@ void Mesh::OptimizeVertexBuffer()
 		}
 	}
 
+	std::cout << "Reassigning Indices To Vertices\n";
 	for (int i{}; i < m_VertexBuffer.size(); i++)
 	{
 		m_VertexBuffer[i].index = i;
@@ -618,42 +762,75 @@ void Mesh::OptimizeVertexBuffer()
 	// [1] [2] [3] [4]	   [5]     [6] [7] //All vertices with original index > 6, decrement
 }
 
-void Mesh::GetNeighbours()
+void Mesh::GetNeighbours(int nrOfThreads)
 {
-	//const std::vector<uint32_t>& m_IndexBuffer = mesh->GetIndexBuffer();
-	//std::vector<VertexInput> m_VertexBuffer = mesh->GetVertexBuffer();
-
-	for (uint32_t i{ 0 }; i < m_IndexBuffer.size(); i++)
+	auto GetNeighboursInRange = [this](uint32_t start, uint32_t end)
 	{
-		std::vector<uint32_t>::iterator it = std::find(m_IndexBuffer.begin(), m_IndexBuffer.end(), i);
-		while (it != m_IndexBuffer.end())
+		for (uint32_t i{ start }; i < end; i++)
 		{
-			uint32_t index = uint32_t(it - m_IndexBuffer.begin());
-			int modulo = index % 3;
-			if (modulo == 0)
+			std::vector<uint32_t>::iterator it = std::find(m_IndexBuffer.begin() + start, m_IndexBuffer.begin() + end, i);
+			while (it != m_IndexBuffer.end() && it < m_IndexBuffer.begin() + end)
 			{
-				if (it + 1 != m_IndexBuffer.end())
-					m_VertexBuffer[i].neighbourIndices.insert(*(it + 1));
-				if (it + 2 != m_IndexBuffer.end())
-					m_VertexBuffer[i].neighbourIndices.insert(*(it + 2));
-			}
-			else if (modulo == 1)
-			{
-				if (it - 1 != m_IndexBuffer.end())
-					m_VertexBuffer[i].neighbourIndices.insert(*(it - 1));
-				if (it + 1 != m_IndexBuffer.end())
-					m_VertexBuffer[i].neighbourIndices.insert(*(it + 1));
-			}
-			else
-			{
-				if (it - 1 != m_IndexBuffer.end())
-					m_VertexBuffer[i].neighbourIndices.insert(*(it - 1));
-				if (it - 2 != m_IndexBuffer.end())
-					m_VertexBuffer[i].neighbourIndices.insert(*(it - 2));
-			}
+				uint32_t index = uint32_t(it - m_IndexBuffer.begin());
+				int modulo = index % 3;
+				if (modulo == 0)
+				{
+					if (it + 1 != m_IndexBuffer.end())
+						m_VertexBuffer[i].neighbourIndices.insert(*(it + 1));
+					if (it + 2 != m_IndexBuffer.end())
+						m_VertexBuffer[i].neighbourIndices.insert(*(it + 2));
+				}
+				else if (modulo == 1)
+				{
+					if (it - 1 != m_IndexBuffer.end())
+						m_VertexBuffer[i].neighbourIndices.insert(*(it - 1));
+					if (it + 1 != m_IndexBuffer.end())
+						m_VertexBuffer[i].neighbourIndices.insert(*(it + 1));
+				}
+				else
+				{
+					if (it - 1 != m_IndexBuffer.end())
+						m_VertexBuffer[i].neighbourIndices.insert(*(it - 1));
+					if (it - 2 != m_IndexBuffer.end())
+						m_VertexBuffer[i].neighbourIndices.insert(*(it - 2));
+				}
 
-			it++;
-			it = std::find(it, m_IndexBuffer.end(), i);
+				it++;
+				it = std::find(it, (m_IndexBuffer.begin() + end), i);
+			}
+		}
+	};
+
+	const uint32_t threadCount = nrOfThreads;
+	std::cout << "\n started with " << threadCount << " threads\n";
+	std::vector<std::thread> threads{};
+
+	const uint32_t diff = uint32_t(m_IndexBuffer.size()) / threadCount;
+	for (uint32_t i{}; i < threadCount; i++)
+	{
+		uint32_t start, end;
+		start = i * diff;
+		end = i * diff + (diff - 1);
+
+		if (start >= uint32_t(m_IndexBuffer.size()))
+			start = uint32_t(m_IndexBuffer.size() - 1);
+
+		if (end >= uint32_t(m_IndexBuffer.size()))
+			end = uint32_t(m_IndexBuffer.size() - 1);
+
+		threads.push_back(std::thread{GetNeighboursInRange, start, end});
+	}
+
+	uint32_t joinedThreads = 0;
+	while (joinedThreads != threadCount)
+	{
+		for (std::thread& thread : threads)
+		{
+			if (thread.joinable())
+			{
+				thread.join();
+				++joinedThreads;
+			}
 		}
 	}
 }

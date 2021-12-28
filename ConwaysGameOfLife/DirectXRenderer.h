@@ -86,6 +86,7 @@ private:
 	void RenderImGui();
 
 	bool m_UseVersionOne;
+	glm::fvec3 m_CameraPosition;
 	//-------------------
 
 	int m_Index;

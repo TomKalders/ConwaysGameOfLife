@@ -26,37 +26,10 @@ bool DirectXApplication::Initialize()
         throw std::exception{ "Unsupported renderer for this application" };
     }
 
-    if (m_pDirectXRenderer)
-    {
-        //vertex 20093 is a vertex that can pbe pulsed for the body
-
-        //enum MeshType
-        //{
-	       // Torus,
-        //    Otter,
-        //    Heart
-        //};
-        //MeshType meshType = MeshType::Heart;
-        //Mesh* mesh = nullptr;
-
-        //switch (meshType)
-        //{
-        //case Torus:
-        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
-        //    break;
-        //case Otter:	
-        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Sea otter.obj" };
-        //    break;
-        //case Heart:
-        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Heart.obj" };
-        //    break;
-        //default:
-        //    mesh = new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/Torus.obj" };
-        //    break;
-        //}
-
-        //m_pDirectXRenderer->AddMesh(mesh);
-    }
+    //if (m_pDirectXRenderer)
+    //{
+    //    m_pDirectXRenderer->AddMesh(new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/01-ventr.vtk", FileType::VTK});
+    //}
 
 	return true;
 }
