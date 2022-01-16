@@ -12,7 +12,6 @@
 DirectXApplication::DirectXApplication(HINSTANCE hInstance)
 	: Application(new DirectXRenderer{ hInstance, {"Heart Pulse Simulation: DirectX"}, 1820, 960 })
 {
-	UNREFERENCED_PARAMETER(hInstance);
 }
 
 bool DirectXApplication::Initialize()
@@ -25,11 +24,6 @@ bool DirectXApplication::Initialize()
     {
         throw std::exception{ "Unsupported renderer for this application" };
     }
-
-    //if (m_pDirectXRenderer)
-    //{
-    //    m_pDirectXRenderer->AddMesh(new Mesh{ m_pDirectXRenderer->GetDevice(), "Resources/Models/01-ventr.vtk", FileType::VTK});
-    //}
 
 	return true;
 }
@@ -121,14 +115,7 @@ void DirectXApplication::Update(float deltaTime)
     {
 	    if (mesh)
 	    {
-            if (m_pDirectXRenderer->UseVersionOne())
-            {
-                mesh->UpdateMesh(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
-            }
-            else
-            {
-                mesh->UpdateMeshV2(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
-            }
+            mesh->UpdateMeshV3(m_pDirectXRenderer->GetDeviceContext(), deltaTime);
 	    }
     }
 }

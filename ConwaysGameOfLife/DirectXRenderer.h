@@ -85,6 +85,10 @@ private:
 	bool InitializeImGui();
 	void RenderImGui();
 
+	static const int m_Size = 128;
+	char* m_Buffer = new char[m_Size]{};
+	int m_Filetype = 0;
+	int m_NrOfThreads = 1;
 	bool m_UseVersionOne;
 	glm::fvec3 m_CameraPosition;
 	//-------------------

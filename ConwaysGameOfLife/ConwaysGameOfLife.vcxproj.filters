@@ -125,9 +125,6 @@
     <ClInclude Include="Mesh.h">
       <Filter>DirectX</Filter>
     </ClInclude>
-    <ClInclude Include="OBJ_Loader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="3rdParty\imgui-1.81\imgui_internal.h">
       <Filter>3rdParty\ImGui</Filter>
     </ClInclude>
@@ -151,6 +148,9 @@
     </ClInclude>
     <ClInclude Include="3rdParty\imgui-1.81\backends\imgui_impl_dx11.h">
       <Filter>3rdParty\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="OBJ_Loader.h">
+      <Filter>3rdParty</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

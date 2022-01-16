@@ -82,6 +82,11 @@ void CreateApplication(HINSTANCE hInstance)
 		std::cout << exception.what() << std::endl;
 		std::cin.get();
 	}
+	catch (...)
+	{
+		std::cout << "An unexpected exception occured\n";
+		std::cin.get();
+	}
 
 	delete app;
 }

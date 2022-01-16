@@ -130,14 +130,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81;$(SolutinDir)3rdParty\meshOptimizer\include</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)\3rdParty\SDL2-2.0.16\lib\x64;$(SolutionDir)3rdParty\dx11effects\lib\x64;$(SolutionDir)3rdParty\glfw-3.3.4\libs\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies);Opengl32.lib;SDL2.lib;SDL2main.lib;dx11effects_d.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdParty\SDL2-2.0.16\lib\x64;$(SolutionDir)3rdParty\dx11effects\lib\x64;$(SolutionDir)3rdParty\glfw-3.3.4\libs\x64;$(SolutionDir)3rdParty\meshOptimizer\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies);Opengl32.lib;SDL2.lib;SDL2main.lib;meshoptimizer.lib;dx11effects_d.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)3rdParty\SDL2-2.0.16\lib\$(PlatformTarget)\SDL2.dll"  "$(OutputPath)" /R /Y</Command>
@@ -151,7 +151,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\glfw-3.3.4\include;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories);$(SolutionDir)3rdParty\glm;$(SolutionDir)3rdParty\SDL2-2.0.16\include;$(SolutionDir)3rdParty\dx11effects\include;$(SolutionDir)3rdParty\imgui-1.81;$(SolutinDir)3rdParty\meshOptimizer\include</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -159,8 +159,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)\3rdParty\SDL2-2.0.16\lib\x64;$(SolutionDir)3rdParty\dx11effects\lib\x64;$(SolutionDir)3rdParty\glfw-3.3.4\libs\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies);Opengl32.lib;SDL2.lib;SDL2main.lib;dx11effects.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdParty\SDL2-2.0.16\lib\x64;$(SolutionDir)3rdParty\dx11effects\lib\x64;$(SolutionDir)3rdParty\glfw-3.3.4\libs\x64;$(SolutionDir)3rdParty\meshOptimizer\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies);Opengl32.lib;SDL2.lib;SDL2main.lib;meshoptimizer.lib;dx11effects.lib;dxgi.lib;d3d11.lib;d3dcompiler.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)3rdParty\SDL2-2.0.16\lib\$(PlatformTarget)\SDL2.dll"  "$(OutputPath)" /R /Y</Command>

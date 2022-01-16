@@ -355,3 +355,11 @@ MigrationBackup/
 
 ConwaysGameOfLife/Resources/Models/Heart.obj
 ConwaysGameOfLife/Resources/Models/HeartLarge.obj
+ConwaysGameOfLife/Resources/Models/HeartMedium.obj
+ConwaysGameOfLife/Resources/Models/HeartSmall.obj
+ConwaysGameOfLife/Resources/Models/HeartMedium.mtl
+ConwaysGameOfLife/Resources/Models/HeartSmall.mtl
+ConwaysGameOfLife/Resources/Models/HeartSmall.bin
+ConwaysGameOfLife/Resources/Models/HeartMedium.bin
+ConwaysGameOfLife/Resources/Models/HeartLarge.obj.bin
+ConwaysGameOfLife/Resources/HeartSmall.bin

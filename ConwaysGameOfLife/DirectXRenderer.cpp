@@ -233,102 +233,111 @@ bool DirectXRenderer::InitializeSDLWindow()
 
 HRESULT DirectXRenderer::InitializeDirectX()
 {
-        //Create Device and Device Context, using hardware acceleration
-        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-        uint32_t createDeviceFlags = 0;
+    //Create a Debug Device when Bebug flag is enabled
+    uint32_t createDeviceFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
-        createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
+    D3D_FEATURE_LEVEL featureLevels[] =
+    {
+        D3D_FEATURE_LEVEL_11_1,
+        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_10_1,
+        D3D_FEATURE_LEVEL_10_0,
+        D3D_FEATURE_LEVEL_9_3,
+        D3D_FEATURE_LEVEL_9_1
+    };
 
-        HRESULT result = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0, D3D11_SDK_VERSION, &m_pDevice, &featureLevel, &m_pDeviceContext);
-        if (FAILED(result))
-            return result;
+    //Create Device and Device Context, using hardware acceleration
+    HRESULT result = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0, D3D11_SDK_VERSION, &m_pDevice, featureLevels, &m_pDeviceContext);
+    if (FAILED(result))
+        return result;
 
-        //Create DXGI Factory to create SwapChain based on hardware
-        result = CreateDXGIFactory(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&m_pDXGIFactory));
-        if (FAILED(result))
-            return result;
+    //Create DXGI Factory to create SwapChain based on hardware
+    result = CreateDXGIFactory(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&m_pDXGIFactory));
+    if (FAILED(result))
+        return result;
 
-        //Create the swapchain discriptor
-        DXGI_SWAP_CHAIN_DESC swapChainDesc{};
-        swapChainDesc.BufferDesc.Width = m_Width;
-        swapChainDesc.BufferDesc.Height = m_Height;
-        swapChainDesc.BufferDesc.RefreshRate.Numerator = 1;
-        swapChainDesc.BufferDesc.RefreshRate.Denominator = 60;
-        swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-        swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-        swapChainDesc.SampleDesc.Count = 1;
-        swapChainDesc.SampleDesc.Quality = 0;
-        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = 1;
-        swapChainDesc.Windowed = true;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-        swapChainDesc.Flags = 0;
+    //Create the swapchain discriptor
+    DXGI_SWAP_CHAIN_DESC swapChainDesc{};
+    swapChainDesc.BufferDesc.Width = m_Width;
+    swapChainDesc.BufferDesc.Height = m_Height;
+    swapChainDesc.BufferDesc.RefreshRate.Numerator = 1;
+    swapChainDesc.BufferDesc.RefreshRate.Denominator = 60;
+    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+    swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferCount = 1;
+    swapChainDesc.Windowed = true;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    swapChainDesc.Flags = 0;
 
-        //Get the handle HWND from the sdl backbuffer
-        SDL_SysWMinfo sysWMInfo{};
-        SDL_VERSION(&sysWMInfo.version);
-        SDL_GetWindowWMInfo(m_pWindow, &sysWMInfo);
-        swapChainDesc.OutputWindow = sysWMInfo.info.win.window;
-        //swapChainDesc.OutputWindow = m_Handle;
+    //Get the handle HWND from the sdl backbuffer
+    SDL_SysWMinfo sysWMInfo{};
+    SDL_VERSION(&sysWMInfo.version);
+    SDL_GetWindowWMInfo(m_pWindow, &sysWMInfo);
+    swapChainDesc.OutputWindow = sysWMInfo.info.win.window;
+    //swapChainDesc.OutputWindow = m_Handle;
 
-        //Create swapchain and hook it into the handle of the SDL window
-        result = m_pDXGIFactory->CreateSwapChain(m_pDevice, &swapChainDesc, &m_pSwapChain);
-        if (FAILED(result))
-            return result;
+    //Create swapchain and hook it into the handle of the SDL window
+    result = m_pDXGIFactory->CreateSwapChain(m_pDevice, &swapChainDesc, &m_pSwapChain);
+    if (FAILED(result))
+        return result;
 
-        //Create the depth/stensil buffer and view
-        D3D11_TEXTURE2D_DESC depthStensilDesc{};
-        depthStensilDesc.Width = m_Width;
-        depthStensilDesc.Height = m_Height;
-        depthStensilDesc.MipLevels = 1;
-        depthStensilDesc.ArraySize = 1;
-        depthStensilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        depthStensilDesc.SampleDesc.Count = 1;
-        depthStensilDesc.SampleDesc.Quality = 0;
-        depthStensilDesc.Usage = D3D11_USAGE_DEFAULT;
-        depthStensilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        depthStensilDesc.CPUAccessFlags = 0;
-        depthStensilDesc.MiscFlags = 0;
+    //Create the depth/stensil buffer and view
+    D3D11_TEXTURE2D_DESC depthStensilDesc{};
+    depthStensilDesc.Width = m_Width;
+    depthStensilDesc.Height = m_Height;
+    depthStensilDesc.MipLevels = 1;
+    depthStensilDesc.ArraySize = 1;
+    depthStensilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthStensilDesc.SampleDesc.Count = 1;
+    depthStensilDesc.SampleDesc.Quality = 0;
+    depthStensilDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthStensilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthStensilDesc.CPUAccessFlags = 0;
+    depthStensilDesc.MiscFlags = 0;
 
-        D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
-        depthStencilViewDesc.Format = depthStensilDesc.Format;
-        depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-        depthStencilViewDesc.Texture2D.MipSlice = 0;
+    D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
+    depthStencilViewDesc.Format = depthStensilDesc.Format;
+    depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-        result = m_pDevice->CreateTexture2D(&depthStensilDesc, 0, &m_pDepthStencilBuffer);
-        if (FAILED(result))
-            return result;
+    result = m_pDevice->CreateTexture2D(&depthStensilDesc, 0, &m_pDepthStencilBuffer);
+    if (FAILED(result))
+        return result;
 
-        result = m_pDevice->CreateDepthStencilView(m_pDepthStencilBuffer, &depthStencilViewDesc, &m_pDepthStencilView);
-        if (FAILED(result))
-            return result;
+    result = m_pDevice->CreateDepthStencilView(m_pDepthStencilBuffer, &depthStencilViewDesc, &m_pDepthStencilView);
+    if (FAILED(result))
+        return result;
 
-        //Create the render target view
-        result = m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_pRenderTargetBuffer));
-        if (FAILED(result))
-            return result;
+    //Create the render target view
+    result = m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_pRenderTargetBuffer));
+    if (FAILED(result))
+        return result;
 
-        result = m_pDevice->CreateRenderTargetView(m_pRenderTargetBuffer, 0, &m_pRenderTargetView);
-        if (FAILED(result))
-            return result;
+    result = m_pDevice->CreateRenderTargetView(m_pRenderTargetBuffer, 0, &m_pRenderTargetView);
+    if (FAILED(result))
+        return result;
 
-        //Bind the views to the output Merger Stage
-        m_pDeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, m_pDepthStencilView);
+    //Bind the views to the output Merger Stage
+    m_pDeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, m_pDepthStencilView);
 
-        //Set the viewport
-        D3D11_VIEWPORT viewPort{};
-        viewPort.Width = static_cast<float>(m_Width);
-        viewPort.Height = static_cast<float>(m_Height);
-        viewPort.TopLeftX = 0.f;
-        viewPort.TopLeftY = 0.f;
-        viewPort.MinDepth = 0.f;
-        viewPort.MaxDepth = 1.f;
-        m_pDeviceContext->RSSetViewports(1, &viewPort);
+    //Set the viewport
+    D3D11_VIEWPORT viewPort{};
+    viewPort.Width = static_cast<float>(m_Width);
+    viewPort.Height = static_cast<float>(m_Height);
+    viewPort.TopLeftX = 0.f;
+    viewPort.TopLeftY = 0.f;
+    viewPort.MinDepth = 0.f;
+    viewPort.MaxDepth = 1.f;
+    m_pDeviceContext->RSSetViewports(1, &viewPort);
 
-        return HRESULT{ S_OK };
-    }
+    return HRESULT{ S_OK };
+}
 
 HRESULT DirectXRenderer::CreateHandle()
 {
@@ -452,6 +461,9 @@ void DirectXRenderer::RenderImGui()
     ImGui_ImplSDL2_NewFrame(m_pWindow);
     ImGui::NewFrame();
 
+    //bool openDemo{ true };
+    //ImGui::ShowDemoWindow(&openDemo);
+
     bool updateBuffer = false;
 
     ImGui::Begin("Data");
@@ -470,6 +482,7 @@ void DirectXRenderer::RenderImGui()
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Spacing();
+
     if (ImGui::CollapsingHeader("Matrices"))
     {
         ImGui::BeginGroup();
@@ -491,12 +504,13 @@ void DirectXRenderer::RenderImGui()
     }
 
     //Vertex Data
+    Mesh* pMesh = nullptr;
     if (ImGui::CollapsingHeader("Vertex Data", ImGuiTreeNodeFlags_DefaultOpen))
     {
 	    if (m_pMeshes.size() > 0 && m_pMeshes[0]->GetVertexBuffer().size() > 0 &&
 		    m_Index >= 0 && m_Index < m_pMeshes[0]->GetVertexBuffer().size())
 	    {
-		    Mesh* pMesh = m_pMeshes[0];
+		    pMesh = m_pMeshes[0];
 		    std::vector<VertexInput>& vertexBuffer = pMesh->GetVertexBufferReference();
 		    VertexInput initialVertex = vertexBuffer[m_Index];
 
@@ -538,6 +552,10 @@ void DirectXRenderer::RenderImGui()
 		    ImGui::Spacing();
 		    ImGui::Spacing();
 		    ImGui::InputInt("Vertex Index", &m_Index);
+            if (m_Index < 0)
+                m_Index = 0;
+            else if (m_Index >= vertexBuffer.size())
+                m_Index = int(vertexBuffer.size()) - 1;
 		    ImGui::Spacing();
 		    ImGui::Spacing();
 		    ImGui::Spacing();
@@ -587,7 +605,8 @@ void DirectXRenderer::RenderImGui()
 		    ImGui::Text(("Normal: " + vec3ToString(initialVertex.normal)).c_str());
 		    ImGui::Text(("Tangent: " + vec3ToString(initialVertex.tangent)).c_str());
 		    ImGui::Text(("UV: " + vec2ToString(initialVertex.uv)).c_str());
-		    ImGui::Text(("Power: " + std::to_string(initialVertex.pulseStrength)).c_str());
+		    ImGui::Text(("Power: " + std::to_string(initialVertex.apVisualization)).c_str());
+		    ImGui::Text(("Active Potential: " + std::to_string(initialVertex.actionPotential)).c_str());
 		    ImGui::Text(("Neighbour Indices: " + indicesToString(initialVertex.neighbourIndices)).c_str());
 
 		    ImGui::Spacing();
@@ -603,20 +622,23 @@ void DirectXRenderer::RenderImGui()
 		    ImGui::Spacing();
 		    ImGui::Spacing();
 		    ImGui::Spacing();
-		    bool useVersion = m_UseVersionOne;
-		    if (ImGui::Checkbox("Use Version One", &m_UseVersionOne))
+
+            std::string state{};
+		    switch (vertexBuffer[m_Index].state)
 		    {
-			    if (useVersion != m_UseVersionOne)
-			    {
-				    pMesh->ClearPulse(m_pDeviceContext);
-			    }
+            case State::Waiting: state = "Waiting"; break;
+		    case State::Receiving: state = "Receiving"; break;
+		    case State::APD: state = "Action Potential"; break;
+		    case State::DI: state = "Diastolic Interval"; break;
 		    }
+            ImGui::Text(state.c_str());
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
 		    if (ImGui::Button("Pulse Vertex"))
 		    {
-			    if (m_UseVersionOne)
-				    pMesh->PulseVertex(m_Index, m_pDeviceContext);
-			    else
-				    pMesh->PulseVertexV2(m_Index, m_pDeviceContext);
+                pMesh->PulseVertexV3(m_Index, m_pDeviceContext);
 		    }
 		    if (ImGui::Button("Pulse Mesh"))
 		    {
@@ -635,6 +657,20 @@ void DirectXRenderer::RenderImGui()
 		    ImGui::Spacing();
 		    ImGui::Spacing();
 		    ImGui::Spacing();
+
+            if (ImGui::Button("Write to binary file"))
+            {
+                pMesh->CreateCachedBinary();
+            }
+            ImGui::InputInt("Nr of threads", &m_NrOfThreads);
+			if (ImGui::Button("Recalculate Neighbours"))
+			{
+                pMesh->CalculateNeighbours(m_NrOfThreads);
+			}
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
 		    ImGui::LabelText("", "Settings");
 
 		    //Camera speed
@@ -693,34 +729,44 @@ void DirectXRenderer::RenderImGui()
 		    ImGui::Spacing();
 		    ImGui::Spacing();
 		    ImGui::Spacing();
-		    if (ImGui::Button("Load Torus Mesh"))
-		    {
-			    Mesh* mesh = new Mesh{GetDevice(), "Resources/Models/Torus.obj"};
-			    AddMesh(mesh);
-		    }
+
 		    if (ImGui::Button("Load Otter Mesh"))
 		    {
 			    Mesh* mesh = new Mesh{GetDevice(), "Resources/Models/Sea otter.obj"};
 			    AddMesh(mesh);
 		    }
-            if (ImGui::Button("Load Sphere"))
+            if (ImGui::Button("Load Otter Mesh BIN"))
             {
-                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/sphere.obj", true, FileType::OBJ };
+                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/Sea otter.bin", false, FileType::BIN };
                 AddMesh(mesh);
             }
 		    if (ImGui::Button("Load Heart Mesh"))
 		    {
-			    Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/HeartLarge.obj", true, FileType::OBJ, 6};
-			    //Mesh* mesh = new Mesh{GetDevice(), "Resources/Models/01-ventr.vtk", true, FileType::VTK};
+			    Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/HeartSmall.obj", false, FileType::OBJ, 6};
 			    AddMesh(mesh);
 		    }
-            if (ImGui::Button("Load Heart Mesh VTK"))
+            if (ImGui::Button("Load Heart Mesh BIN"))
             {
-                //Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/Heart.obj", true, FileType::OBJ, 6};
-                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/01-ventr.vtk", true, FileType::VTK };
+                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/HeartSmall.bin", false, FileType::BIN };
                 AddMesh(mesh);
             }
+            //if (ImGui::Button("Load Heart Mesh VTK"))
+            //{
+            //    Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/01-ventr.vtk", false, FileType::VTK };
+            //    AddMesh(mesh);
+            //}
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
 
+            ImGui::Text("Load a mesh from the Resource/Models folder in the project");
+            ImGui::InputText("Mesh", &m_Buffer[0], m_Size);
+            ImGui::InputInt("Filetype", &m_Filetype);
+            if (ImGui::Button("Load Mesh"))
+            {
+                Mesh* mesh = new Mesh{ GetDevice(), "Resources/Models/" + std::string{m_Buffer}, false, FileType(m_Filetype)};
+                AddMesh(mesh);
+            }
 
 		    ImGui::Spacing();
 		    ImGui::Spacing();
@@ -740,8 +786,31 @@ void DirectXRenderer::RenderImGui()
 			    m_Index = int(m_pMeshes[0]->GetVertexBuffer().size()) - 1;
 	    }
     }
-
     ImGui::End();
+
+    if (pMesh)
+    {
+	    ImGui::Begin("Plots");
+	    const std::vector<float>& values = pMesh->GetAPPlot();
+	    glm::fvec2 minMax = pMesh->GetMinMax();
+
+	    ImGui::PlotLines("APD Plot", values.data(), int(values.size()));
+
+	    std::string string{"XMin: 0 "};
+	    string += "XMax: " + std::to_string(values.size());
+	    ImGui::Text(string.c_str());
+	    string = "YMin: " + std::to_string(minMax.x) + " YMax: " + std::to_string(minMax.y);
+	    ImGui::Text(string.c_str());
+
+	    string = "Active Potential: " + std::to_string(pMesh->GetAPD());
+	    ImGui::Text(string.c_str());
+
+        string = "Diastolic Interval: " + std::to_string(pMesh->GetDiastolicInterval().count());
+        ImGui::Text(string.c_str());
+
+	    ImGui::End();
+    }
+
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }

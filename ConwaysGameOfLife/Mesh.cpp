@@ -6,6 +6,7 @@
 #include <thread>
 
 //External Headers
+#include <meshoptimizer.h>
 #pragma warning(push)
 #pragma warning(disable:4244)
 #pragma warning(disable:4701)
@@ -13,8 +14,11 @@
 #undef OBJL_CONSOLE_OUTPUT
 #pragma warning(pop)
 
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
 Mesh::Mesh()
 	: m_pEffect{}
+	, m_pOptimizerEffect{}
 	, m_pVertexLayout{ nullptr }
 	, m_pVertexBuffer{ nullptr }
 	, m_pIndexBuffer{ nullptr }
@@ -23,7 +27,16 @@ Mesh::Mesh()
 	, m_WireFrameEnabled{false}
 	, m_AmountIndices{}
 	, m_WorldMatrix{ glm::mat4{1.f} }
+	, m_SkipOptimization{false}
+	//Data
+	, m_DiastolicInterval{750}
+	, m_APThreshold{0}
+	, m_APMinValue(0)
+	, m_APMaxValue(0)
+	, m_APD(0)
+	, m_PathName{}
 {
+	LoadPlotData(1000);
 }
 
 Mesh::Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices)
@@ -36,16 +49,20 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, cons
 Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath, bool skipOptimization, FileType fileType, int nrOfThreads)
 	: Mesh()
 {
+	m_PathName = filepath;
 	m_SkipOptimization = skipOptimization;
 	CreateEffect(pDevice);
 
 	switch (fileType)
 	{
 	case FileType::OBJ:
-		LoadMeshFromOBJ(filepath, nrOfThreads);
+		LoadMeshFromOBJ(nrOfThreads);
 		break;
 	case FileType::VTK:
-		LoadMeshFromVTK(filepath);
+		LoadMeshFromVTK();
+		break;
+	case FileType::BIN:
+		LoadMeshFromBIN();
 		break;
 	}
 
@@ -117,17 +134,17 @@ void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewPro
 	}
 }
 
-glm::mat4 Mesh::GetWorldMatrix()
+const glm::mat4& Mesh::GetWorldMatrix() const
 {
 	return m_WorldMatrix;
 }
 
-const std::vector<uint32_t>& Mesh::GetIndexBuffer()
+const std::vector<uint32_t>& Mesh::GetIndexBuffer() const
 {
 	return m_IndexBuffer;
 }
 
-const std::vector<VertexInput>& Mesh::GetVertexBuffer()
+const std::vector<VertexInput>& Mesh::GetVertexBuffer() const
 {
 	return m_VertexBuffer;
 }
@@ -137,9 +154,29 @@ std::vector<VertexInput>& Mesh::GetVertexBufferReference()
 	return m_VertexBuffer;
 }
 
-const std::set<VertexInput*>& Mesh::GetVerticesToUpdate()
+const std::set<VertexInput*>& Mesh::GetVerticesToUpdate() const
 {
 	return m_VerticesToUpdate;
+}
+
+const std::vector<float>& Mesh::GetAPPlot() const
+{
+	return m_APPlot;
+}
+
+glm::fvec2 Mesh::GetMinMax() const
+{
+	return glm::fvec2{ m_APMinValue, m_APMaxValue };
+}
+
+float Mesh::GetAPD() const
+{
+	return m_APD;
+}
+
+std::chrono::milliseconds Mesh::GetDiastolicInterval() const
+{
+	return m_DiastolicInterval;
 }
 
 void Mesh::SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer)
@@ -170,6 +207,84 @@ void Mesh::SetScale(float x, float y, float z)
 	m_WorldMatrix[2].z = z;
 }
 
+void Mesh::CreateCachedBinary()
+{
+	size_t pos = m_PathName.find('.');
+	std::string path = m_PathName.substr(0, pos);
+	path += ".bin";
+
+	std::ofstream fileStream{ path, std::ios::out | std::ios::binary };
+	if (fileStream.is_open())
+	{
+		//Write the number of indices & the index values
+		const size_t nrOfIndices = m_IndexBuffer.size();
+		fileStream.write((const char*)&nrOfIndices, sizeof(size_t));
+		fileStream.write((const char*)&m_IndexBuffer[0], sizeof(uint32_t) * m_IndexBuffer.size());
+
+		//Read the number of vertices & the vertices
+		const size_t nrOfVertices = m_VertexBuffer.size();
+		fileStream.write((const char*)&nrOfVertices, sizeof(size_t));
+
+		for (const VertexInput& vertex : m_VertexBuffer)
+		{
+			fileStream.write((const char*)&vertex.position, sizeof(glm::fvec3));
+			fileStream.write((const char*)&vertex.normal, sizeof(glm::fvec3));
+			fileStream.write((const char*)&vertex.color1, sizeof(glm::fvec3));
+			fileStream.write((const char*)&vertex.color2, sizeof(glm::fvec3));
+			fileStream.write((const char*)&vertex.tangent, sizeof(glm::fvec3));
+			fileStream.write((const char*)&vertex.uv, sizeof(glm::fvec2));
+
+			const size_t nrOfNeighbours = vertex.neighbourIndices.size();
+			fileStream.write((const char*)&nrOfNeighbours, sizeof(size_t));
+
+			for (const uint32_t& index : vertex.neighbourIndices)
+			{
+				fileStream.write((const char*)&index, sizeof(uint32_t));
+			}
+		}
+	}
+}
+
+void Mesh::CreatedChacedNeighbours()
+{
+	std::ofstream fileStream{ m_PathName + ".bin", std::ios::out | std::ios::binary };
+	if (fileStream.is_open())
+	{
+		for (VertexInput& vertex : m_VertexBuffer)
+		{
+			size_t size = vertex.neighbourIndices.size();
+			fileStream.write((const char*)&size, sizeof(size_t));
+			for (uint32_t index : vertex.neighbourIndices)
+			{
+				fileStream.write((const char*)&index, sizeof(uint32_t));
+			}
+		}
+	}
+}
+
+void Mesh::LoadCachedNeighbours()
+{
+	std::ifstream fileStream{ m_PathName + ".bin", std::ios::in | std::ios::binary };
+	if (fileStream.is_open())
+	{
+		for (VertexInput& vertex : m_VertexBuffer)
+		{
+			size_t size{};
+			fileStream.read((char*)&size, sizeof(size_t));
+			vertex.neighbourIndices.clear();
+
+			for (int i{}; i < size; i++)
+			{
+				uint32_t index{};
+				fileStream.read((char*)&index, sizeof(uint32_t));
+				vertex.neighbourIndices.insert(index);
+			}
+		}
+	}
+}
+
+
+//Pulse Simulations
 void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 {
 	if (m_VerticesToUpdate.empty() && m_NeighboursToUpdate.empty())
@@ -180,11 +295,11 @@ void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 	std::vector<VertexInput*> verticesToRemove{};
 	for (VertexInput* vertex : m_VerticesToUpdate)
 	{
-		if (vertex->pulseStrength > 0.f)
-			vertex->pulseStrength -= deltaTime;
+		if (vertex->apVisualization > 0.f)
+			vertex->apVisualization -= deltaTime;
 		else
 		{
-			vertex->pulseStrength = 0.f;
+			vertex->apVisualization = 0.f;
 			verticesToRemove.push_back(vertex);
 		}
 	}
@@ -216,13 +331,136 @@ void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 	UpdateVertexBuffer(pDeviceContext);
 }
 
+void Mesh::PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+{
+	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
+	{
+		PulseVertex(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
+	}
+}
+
+void Mesh::PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+{
+	if (vertex)
+	{
+		if (vertex->apVisualization <= 0.3f)
+		{
+			vertex->apVisualization = 1;
+			m_VerticesToUpdate.insert(vertex);
+			PulseNeighbours(*vertex);
+		}
+	}
+
+	if (updateVertexBuffer)
+		UpdateVertexBuffer(pDeviceContext);
+}
+
+void Mesh::UpdateMeshV3(ID3D11DeviceContext* pDeviceContext, float deltaTime)
+{
+	pDeviceContext;
+	deltaTime;
+
+	float dist = (m_APMaxValue - m_APMinValue);
+	float deltaTimeInMs = deltaTime * 1000.f;
+
+	for (VertexInput& vertex : m_VertexBuffer)
+	{
+		switch (vertex.state)
+		{
+		case State::APD:
+		{
+			vertex.timePassed += deltaTimeInMs;
+
+			int idx = int(vertex.timePassed);
+
+			if (!m_APPlot.empty() && idx > 0 && idx < m_APPlot.size() && (size_t(idx) + size_t(1)) < m_APPlot.size())
+			{
+				float value1 = m_APPlot[idx];
+				float value2 = m_APPlot[(size_t(idx) + size_t(1))];
+				float t = vertex.timePassed - idx;
+
+				float lerpedValue = value1 + t * (value2 - value1);
+
+				float valueRange01 = (lerpedValue - m_APMinValue) / dist;
+
+				vertex.actionPotential = lerpedValue;
+				vertex.apVisualization = valueRange01;
+			}
+
+			if (vertex.timePassed >= m_APD)
+			{
+				vertex.timePassed = 0.f;
+				vertex.state = State::DI;
+				vertex.apVisualization = 0.f;
+			}
+
+			break;
+		}
+		case State::DI:
+			vertex.timePassed += deltaTimeInMs;
+
+			if (vertex.timePassed >= m_DiastolicInterval.count())
+			{
+				vertex.timePassed = 0.f;
+				vertex.state = State::Waiting;
+			}
+			break;
+
+		case State::Receiving:
+			vertex.timeToTravel -= deltaTime;
+			if (vertex.timeToTravel <= 0.f)
+			{
+				vertex.state = State::Waiting;
+				PulseVertexV3(&vertex, pDeviceContext, false);
+			}
+			break;
+		}
+	}
+
+	UpdateVertexBuffer(pDeviceContext);
+}
+
+void Mesh::PulseVertexV3(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+{
+	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
+	{
+		PulseVertexV3(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
+	}
+}
+
+void Mesh::PulseVertexV3(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+{
+	if (vertex)
+	{
+		if (vertex->state == State::Waiting /* || (vertex->actionPotential < m_APThreshold && vertex->state == State::DI)*/)
+		{
+			vertex->actionPotential = m_APPlot[0];
+			vertex->state = State::APD;
+
+			for (uint32_t index : vertex->neighbourIndices)
+			{
+				VertexInput& neighbourVertex = m_VertexBuffer[index];
+				if (neighbourVertex.state == State::Waiting)
+				{
+					float distance = glm::distance(vertex->position, neighbourVertex.position);
+					neighbourVertex.timeToTravel = distance / neighbourVertex.propogationSpeed;
+					neighbourVertex.state = State::Receiving;
+				}
+			}
+		}
+	}
+
+	if (updateVertexBuffer)
+		UpdateVertexBuffer(pDeviceContext);
+}
+
 void Mesh::UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 {
 	for (VertexInput& vertex : m_VertexBuffer)
 	{
 		if (vertex.IsPulsed())
 		{
-			vertex.pulseStrength -= deltaTime;
+			vertex.apVisualization -= deltaTime;
 		}
 		else if (IsAnyNeighbourActive(vertex))
 		{
@@ -271,30 +509,6 @@ void Mesh::UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 	}
 }
 
-void Mesh::PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
-{
-	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
-	{
-		PulseVertex(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
-	}
-}
-
-void Mesh::PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
-{
-	if (vertex)
-	{
-		if (vertex->pulseStrength <= 0.3f)
-		{
-			vertex->pulseStrength = 1;
-			m_VerticesToUpdate.insert(vertex);
-			PulseNeighbours(*vertex);
-		}
-	}
-
-	if (updateVertexBuffer)
-		UpdateVertexBuffer(pDeviceContext);
-}
-
 void Mesh::PulseVertexV2(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
 {
 	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
@@ -309,13 +523,14 @@ void Mesh::PulseVertexV2(VertexInput* vertex, ID3D11DeviceContext* pDeviceContex
 	{
 		if (!vertex->IsPulsed())
 		{
-			vertex->pulseStrength = 1;
+			vertex->apVisualization = 1;
 		}
 	}
 
 	if (updateVertexBuffer)
 		UpdateVertexBuffer(pDeviceContext);
 }
+
 
 void Mesh::PulseMesh(ID3D11DeviceContext* pDeviceContext)
 {
@@ -330,7 +545,9 @@ void Mesh::ClearPulse(ID3D11DeviceContext* pDeviceContext)
 {
 	for (VertexInput& vertex : m_VertexBuffer)
 	{
-		vertex.pulseStrength = 0.f;
+		vertex.apVisualization = 0.f;
+		vertex.state = State::Waiting;
+		vertex.timePassed = 0.f;
 	}
 
 	m_VerticesToUpdate.clear();
@@ -449,7 +666,7 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 	return result;
 }
 
-void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
+void Mesh::LoadMeshFromOBJ(uint32_t nrOfThreads)
 {
 	auto timeStart = std::chrono::high_resolution_clock::now();
 
@@ -457,7 +674,7 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
 	std::cout << "\n--- Started Reading Mesh File ---\n";
 	objl::Loader loader;
 
-	bool loadout = loader.LoadFile(pathName);
+	bool loadout = loader.LoadFile(m_PathName);
 	if (loadout)
 	{
 		if (loader.LoadedMeshes.size() > 0)
@@ -484,6 +701,8 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
 			{
 				m_IndexBuffer.push_back(index);
 			}
+
+			m_AmountIndices = uint32_t(m_IndexBuffer.size());
 			std::cout << "--- Finished Reading Mesh File ---\n";
 			std::cout << m_VertexBuffer.size() << " Vertices Read\n";
 			std::cout << m_IndexBuffer.size() << " Indices Read\n";
@@ -491,6 +710,7 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
 			//Remove indices pointing towards duplicate vertices
 			if (!m_SkipOptimization)
 				OptimizeIndexBuffer();
+			//OptimizeIndexBufferLib();
 
 			//Calculate the tangents
 			CalculateTangents();
@@ -504,9 +724,12 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
 			}
 
 			//Get the neighbour of every vertex
-			std::cout << "\n--- Started Calculating Vertex Neighbours ---\n";
-			GetNeighbours(nrOfThreads);
-			std::cout << "--- Finished Calculating Vertex Neighbours ---\n";
+			if (!m_SkipOptimization)
+			{
+				std::cout << "\n--- Started Calculating Vertex Neighbours ---\n";
+				CalculateNeighbours(nrOfThreads);
+				std::cout << "--- Finished Calculating Vertex Neighbours ---\n";
+			}
 
 			std::cout << m_VertexBuffer.size() << " Vertices After Optimization\n";
 			std::cout << m_IndexBuffer.size() << " Indices After Optimization\n";
@@ -522,11 +745,11 @@ void Mesh::LoadMeshFromOBJ(const std::string& pathName, uint32_t nrOfThreads)
 
 }
 
-void Mesh::LoadMeshFromVTK(const std::string& pathName)
+void Mesh::LoadMeshFromVTK()
 {
 	std::cout << "\n[Started Reading Mesh]\n";
-	size_t pos = pathName.find('.');
-	std::string path = pathName.substr(0, pos);
+	size_t pos = m_PathName.find('.');
+	std::string path = m_PathName.substr(0, pos);
 
 	std::map<uint32_t, uint32_t> indicesToReplace{};
 
@@ -613,6 +836,56 @@ void Mesh::LoadMeshFromVTK(const std::string& pathName)
 		indexStream.close();
 		vertexStream.close();
 	}
+
+	std::cout << "Started Calculating Neighbours\n";
+	CalculateNeighbours(6);
+	std::cout << "Finished Calculating Neighbours\n";
+}
+
+void Mesh::LoadMeshFromBIN()
+{
+	std::ifstream fileStream{ m_PathName, std::ios::in | std::ios::binary };
+	if (fileStream.is_open())
+	{
+		//Read in the indexbuffer
+		m_IndexBuffer.clear();
+		size_t nrOfIndices{};
+		fileStream.read((char*)&nrOfIndices, sizeof(size_t));
+		m_AmountIndices = uint32_t(nrOfIndices);
+
+		m_IndexBuffer.resize(nrOfIndices);
+		fileStream.read((char*)&m_IndexBuffer[0], sizeof(uint32_t) * nrOfIndices);
+
+		//Read in the vertices
+		m_VertexBuffer.clear();
+		size_t nrOfVertices{};
+		fileStream.read((char*)&nrOfVertices, sizeof(size_t));
+
+		m_VertexBuffer.resize(nrOfVertices);
+		for (VertexInput& vertex : m_VertexBuffer)
+		{
+			fileStream.read((char*)&vertex.position, sizeof(glm::fvec3));
+			fileStream.read((char*)&vertex.normal, sizeof(glm::fvec3));
+			fileStream.read((char*)&vertex.color1, sizeof(glm::fvec3));
+			fileStream.read((char*)&vertex.color2, sizeof(glm::fvec3));
+			fileStream.read((char*)&vertex.tangent, sizeof(glm::fvec3));
+			fileStream.read((char*)&vertex.uv, sizeof(glm::fvec2));
+
+			size_t nrOfNeighbours{};
+			fileStream.read((char*)&nrOfNeighbours, sizeof(size_t));
+
+			for (size_t i{}; i < nrOfNeighbours; i++)
+			{
+				uint32_t neighbourIndex{};
+				fileStream.read((char*)&neighbourIndex, sizeof(uint32_t));
+
+				vertex.neighbourIndices.insert(neighbourIndex);
+			}
+		}
+
+		std::cout << "index buffer size: " << m_IndexBuffer.size() << std::endl;
+		std::cout << "vertex buffer size: " << m_VertexBuffer.size() << std::endl;
+	}
 }
 
 void Mesh::CalculateTangents()
@@ -663,24 +936,31 @@ void Mesh::OptimizeIndexBuffer()
 		m_IndexBuffer.erase(removeIt);
 
 	//Loop over all the indices and check if they're pointing to duplicate vertices
-	std::set<uint32_t> seenIndices{};
+	//std::set<uint32_t> seenIndices{};
+	std::cout << std::endl;
+
+	bool firstRun = true;
+	TimePoint start = std::chrono::high_resolution_clock::now();
+	TimePoint startActual = std::chrono::high_resolution_clock::now();
+
 	for (size_t i{}; i < m_IndexBuffer.size(); i++)
 	{
+
+		if (i % 1000 == 0 && !firstRun)
+		{
+			printf("\33[2K\r");
+			int percentage = int((float(i) / float(m_IndexBuffer.size())) * 100);
+			std::cout << i << " / " << m_IndexBuffer.size() << " " << percentage << "%";
+		}
 		uint32_t index = m_IndexBuffer[i];
 		if (index >= m_VertexBuffer.size())
 			continue;
 
-		std::set<uint32_t>::iterator itFind = std::find(seenIndices.begin(), seenIndices.end(), index);
-		if (itFind != seenIndices.end())
-		{
-			int division = int(m_IndexBuffer.size()) / 10;
-			int result = i % division;
-			if (result == 1)
-			{
-				std::cout << "Optimizing Index Buffer: " << std::to_string(int(float(i) / m_IndexBuffer.size() * 100)) << "%\n";
-			}
-			continue;
-		}
+		//std::set<uint32_t>::iterator itFind = std::find(seenIndices.begin(), seenIndices.end(), index);
+		//if (itFind != seenIndices.end())
+		//{
+		//	continue;
+		//}
 
 		VertexInput vertex = m_VertexBuffer[index];
 
@@ -704,16 +984,38 @@ void Mesh::OptimizeIndexBuffer()
 		{
 			std::replace(m_IndexBuffer.begin() + i, m_IndexBuffer.end(), duplicate, index);
 		}
-		seenIndices.insert(index);
+		//seenIndices.insert(index);
 
-		int division = int(m_IndexBuffer.size()) / 10;
-		int result = i % division;
-		if (result == 1)
+		if (firstRun)
 		{
-			std::cout << "Optimizing Index Buffer: " << std::to_string(int(float(i) / m_IndexBuffer.size() * 100)) << "%\n";
+			TimePoint end = std::chrono::high_resolution_clock::now();
+			auto seconds = std::chrono::duration_cast<std::chrono::seconds>((end - start) * m_IndexBuffer.size());
+			auto minutes = std::chrono::duration_cast<std::chrono::minutes>((end - start) * m_IndexBuffer.size());
+			auto hours = std::chrono::duration_cast<std::chrono::hours>((end - start) * m_IndexBuffer.size());
+			std::cout << "Estimated Time: " << seconds.count() << " seconds" << "( " << hours.count() << " hours and " << minutes.count() - (hours.count() * 60 ) << " minutes )\n";
+			firstRun = false;
 		}
 	}
+	TimePoint endActual = std::chrono::high_resolution_clock::now();
+	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(endActual - startActual);
+	auto minutes = std::chrono::duration_cast<std::chrono::minutes>(endActual - startActual);
+	auto hours = std::chrono::duration_cast<std::chrono::hours>(endActual - startActual);
+	std::cout << "\nOptimizing took " << seconds.count() << " seconds" << "( " << hours.count() << " hours and " << minutes.count() - (hours.count() * 60) << " minutes )\n";
+
 	std::cout << "--- Finished Optimizing Index Buffer ---\n";
+}
+
+void Mesh::OptimizeIndexBufferLib()
+{
+	std::vector<VertexInput> unindexedVertices{ m_VertexBuffer };
+	unindexedVertices.resize(m_AmountIndices);
+
+	std::vector<unsigned int> remap(m_AmountIndices); // allocate temporary memory for the remap table
+	meshopt_generateVertexRemap(&remap[0], NULL, m_AmountIndices, &unindexedVertices[0], m_AmountIndices, sizeof(VertexInput));
+
+	std::vector<VertexInput> vertices{ m_VertexBuffer.size() };
+	meshopt_remapIndexBuffer(&m_IndexBuffer[0], NULL, m_AmountIndices, &remap[0]);
+	meshopt_remapVertexBuffer(&vertices[0], &unindexedVertices[0], m_AmountIndices, sizeof(VertexInput), &remap[0]);
 }
 
 void Mesh::OptimizeVertexBuffer()
@@ -762,7 +1064,7 @@ void Mesh::OptimizeVertexBuffer()
 	// [1] [2] [3] [4]	   [5]     [6] [7] //All vertices with original index > 6, decrement
 }
 
-void Mesh::GetNeighbours(int nrOfThreads)
+void Mesh::CalculateNeighbours(int nrOfThreads)
 {
 	auto GetNeighboursInRange = [this](uint32_t start, uint32_t end)
 	{
@@ -865,6 +1167,59 @@ bool Mesh::IsAnyNeighbourActive(const VertexInput& vertex)
 	}
 
 	return false;
+}
+
+void Mesh::LoadPlotData(int nrOfValuesAPD)
+{
+	//function to calculate near values of APD Plot
+	//y = 15.311ln(x) + 219.77
+	//function to calculate ln(x)
+	//ln(x) = log(x) / log(2.71828)
+
+	m_APDPlot.resize(nrOfValuesAPD);
+
+	for (int x{}; x < nrOfValuesAPD; x++)
+	{
+		float lnX = logf(float(x)) / logf(2.71828f);
+		float value = 15.311f * lnX + 219.77f;
+		m_APDPlot[x] = std::chrono::milliseconds(static_cast<long long>(value));
+	}
+
+	float diastolicInterval = float(m_DiastolicInterval.count());
+	size_t idx = size_t(diastolicInterval);
+	if (idx > 0 && idx < m_APDPlot.size() && (idx + 1) < m_APDPlot.size())
+	{
+		float value1 = float(m_APDPlot[idx].count());
+		float value2 = float(m_APDPlot[idx + 1].count());
+
+		float t = diastolicInterval - int(idx);
+
+		m_APD = value1 + t * (value2 - value1);
+	}
+
+	//function to calculate near values of the APD Plot
+	//y = -0.0005x² - 0.0187x + 32.118
+	m_APThreshold = 0.f;
+
+	m_APPlot.resize((size_t(m_APD) + size_t(1)));
+
+	float minValue = FLT_MAX;
+	float maxValue = FLT_MAX * -1;
+
+	for (int x{}; float(x) < m_APD; x++)
+	{
+		float value = -0.0005f * powf(float(x), 2) - (0.0187f * float(x)) + 32.118f;
+		m_APPlot[x] = value;
+
+		if (minValue > value)
+			minValue = value;
+
+		if (maxValue < value)
+			maxValue = value;
+	}
+
+	m_APMinValue = minValue;
+	m_APMaxValue = maxValue;
 }
 
 void Mesh::CreateEffect(ID3D11Device* pDevice)

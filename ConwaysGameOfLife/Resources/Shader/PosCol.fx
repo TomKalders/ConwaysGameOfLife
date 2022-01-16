@@ -93,7 +93,6 @@ struct VS_OUTPUT
 VS_OUTPUT VS(VS_INPUT input)
 {
 	VS_OUTPUT output = (VS_OUTPUT)0;
-    //output.Position = float4(input.Position, 1);
 	output.Position = mul(gWorldViewProj, float4(input.Position, 1.f));
     output.WorldPosition = mul(input.Position, (float3x3)gWorldMatrix);
 	output.Normal = mul(normalize(input.Normal), (float3x3)gWorldMatrix);

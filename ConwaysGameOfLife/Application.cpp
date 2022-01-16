@@ -28,7 +28,6 @@ void Application::Run()
 			m_DeltaTime = std::chrono::duration<float>(currentTime - timeLastFrame).count();
 
 			//Basic game loop
-			//Handle Input -> Update -> Render
 			HandleInput();
 			Update(m_DeltaTime);
 			m_pRenderer->Render();
