@@ -147,11 +147,8 @@ void DirectXRenderer::Cleanup()
 		SDL_Quit();
     }
 
-    //if (m_pInputBuffer)
-    //{
-    //    delete m_pInputBuffer;
-    //	m_pInputBuffer = nullptr;
-    //}
+    if (m_Buffer)   
+	   delete[] m_Buffer;
 }
 
 int DirectXRenderer::GetWindowWidth() const
@@ -609,16 +606,17 @@ void DirectXRenderer::RenderImGui()
 		    ImGui::Text(("Active Potential: " + std::to_string(initialVertex.actionPotential)).c_str());
 		    ImGui::Text(("Neighbour Indices: " + indicesToString(initialVertex.neighbourIndices)).c_str());
 
-		    ImGui::Spacing();
-		    ImGui::Spacing();
-		    ImGui::Spacing();
-		    float propSpeed = initialVertex.propogationSpeed;
-		    ImGui::InputFloat("Propogation Speed", &propSpeed);
-		    if (abs(propSpeed - initialVertex.propogationSpeed) > 0.001f)
-		    {
-			    initialVertex.propogationSpeed = propSpeed;
-			    updateBuffer = true;
-		    }
+	    	ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            int DI = int(pMesh->GetDiastolicInterval().count());
+            ImGui::InputInt("Diastolic Interval", &DI);
+            if (DI != int(pMesh->GetDiastolicInterval().count()))
+            {
+                pMesh->SetDiastolicInterval(float(DI));
+            }
+
 		    ImGui::Spacing();
 		    ImGui::Spacing();
 		    ImGui::Spacing();
@@ -702,7 +700,7 @@ void DirectXRenderer::RenderImGui()
 		    {
 			    for (VertexInput& vertex : vertexBuffer)
 			    {
-				    vertex.propogationSpeed = initialVertex.propogationSpeed;
+				    //vertex.propogationSpeed = initialVertex.propogationSpeed;
 				    vertex.color1 = initialVertex.color1;
 				    vertex.color2 = initialVertex.color2;
 			    }
@@ -802,7 +800,7 @@ void DirectXRenderer::RenderImGui()
 	    string = "YMin: " + std::to_string(minMax.x) + " YMax: " + std::to_string(minMax.y);
 	    ImGui::Text(string.c_str());
 
-	    string = "Active Potential: " + std::to_string(pMesh->GetAPD());
+	    string = "Active Potential Duration: " + std::to_string(pMesh->GetAPD());
 	    ImGui::Text(string.c_str());
 
         string = "Diastolic Interval: " + std::to_string(pMesh->GetDiastolicInterval().count());

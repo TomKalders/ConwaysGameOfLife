@@ -109,6 +109,7 @@ VS_OUTPUT VS(VS_INPUT input)
 float4 PS(VS_OUTPUT input) : SV_TARGET
 {
     float lambert = 0.5f + dot(-input.Normal, gLightDirection);
+    lambert = lambert * (lambert > 0.f);
 
     float3 color1 = input.Color;
     float3 color2 = input.ColorTwo;

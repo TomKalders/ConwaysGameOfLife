@@ -45,7 +45,7 @@ struct VertexInput
 		, apVisualization(0.f)
 		, state{State::Waiting}
 		, index(index)
-		, propogationSpeed(1.f)
+		//, propogationSpeed(1.f)
 		, actionPotential{ 0.f }
 		, timePassed(0.f)
 		, timeToTravel(0.f)
@@ -63,7 +63,7 @@ struct VertexInput
 		, apVisualization{}
 		, state{State::Waiting}
 		, index{}
-		, propogationSpeed{1.f}
+		//, propogationSpeed{1.f}
 		, actionPotential{0.f}
 		, timePassed(0.f)
 		, timeToTravel{}
@@ -83,7 +83,7 @@ struct VertexInput
 	//Members not part of input layout
 	State state;							//Current state of the vertex
 	uint32_t index;							//Index of the vertex (used in optimization)
-	float propogationSpeed;					//Propogation speed of the pulse
+	//float propogationSpeed;					//Propogation speed of the pulse
 	float actionPotential;					//Current action potential (in mV)
 	float timePassed;						//Float to store passed time in different states
 	float timeToTravel;						//The time before activating this vertex
@@ -93,17 +93,11 @@ struct VertexInput
 	bool operator==(const VertexInput& other)
 	{
 		return this->position == other.position;
-		//return (abs(this->position.x - other.position.x) < 0.01f &&
-		//		abs(this->position.y - other.position.y) < 0.01f &&
-		//		abs(this->position.z - other.position.z) < 0.01f);
 	}
 
 	friend bool operator==(const VertexInput& rhs, const VertexInput& lhs)
 	{
 		return rhs.position == lhs.position;
-		//return (abs(rhs.position.x - lhs.position.x) < 0.01f &&
-		//		abs(rhs.position.y - lhs.position.y) < 0.01f &&
-		//		abs(rhs.position.z - lhs.position.z) < 0.01f);
 	}
 
 	bool IsPulsed()
@@ -126,14 +120,6 @@ public:
 	void Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewProjMatrix, const float* inverseView);
 	void UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext);
 
-	void UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime);
-	void PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
-	void PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
-
-	void UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime);
-	void PulseVertexV2(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
-	void PulseVertexV2(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
-
 	void UpdateMeshV3(ID3D11DeviceContext* pDeviceContext, float deltaTime);
 	void PulseVertexV3(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
 	void PulseVertexV3(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
@@ -149,16 +135,16 @@ public:
 
 	const std::set<VertexInput*>& GetVerticesToUpdate() const;
 	const std::vector<float>& GetAPPlot() const;
-	glm::fvec2 GetMinMax() const;
-	float GetAPD() const;
 	std::chrono::milliseconds GetDiastolicInterval() const;
+	glm::fvec2 GetMinMax() const;
+	glm::fvec3 GetScale();
+	float GetAPD() const;
 
 	void SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer);
 	void SetWireframe(bool enabled);
-
-	glm::fvec3 GetScale();
 	void SetScale(const glm::fvec3& scale);
 	void SetScale(float x, float y, float z);
+	void SetDiastolicInterval(float diastolicInterval);
 
 	void CreateCachedBinary();
 	void CreatedChacedNeighbours();
@@ -186,7 +172,6 @@ private:
 	void LoadMeshFromBIN();							//Should be put in an AssetLoader Class
 	void CalculateTangents();						//Should be put in an AssetLoader Class
 	void OptimizeIndexBuffer();						//Should be put in an AssetLoader Class
-	void OptimizeIndexBufferLib();					//Should be put in an AssetLoader Class
 	void OptimizeVertexBuffer();					//Should be put in an AssetLoader Class
 	bool m_SkipOptimization;						//Should be put in an AssetLoader Class
 
@@ -195,7 +180,6 @@ private:
 
 
 	//Vertex Data
-	void PulseNeighbours(const VertexInput& vertex);
 	bool IsAnyNeighbourActive(const VertexInput& vertex);
 
 	glm::mat4 m_WorldMatrix;
@@ -213,10 +197,21 @@ private:
 	float m_APMaxValue;
 	float m_APMinValue;
 	float m_APD;
-	std::vector<float> m_APPlot; // APD (mV) in function of time (ms)
-	std::vector<std::chrono::milliseconds> m_APDPlot; // APD (ms) in function of Diastolic Interval (ms)
+	float m_ConductionVelocity;
+	std::vector<float> m_APPlot;						// APD (mV) in function of time (ms)
+	std::vector<std::chrono::milliseconds> m_APDPlot;	// APD (ms) in function of Diastolic Interval (ms)// DI (ms) in function of Conduction Velocity (cm/s)
 
 	//File Data
 	std::string m_PathName;
 };
 
+#pragma region OldVersion
+//void UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime);
+//void PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+//void PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+
+//void UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime);
+//void PulseVertexV2(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+//void PulseVertexV2(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer = true);
+//void PulseNeighbours(const VertexInput& vertex);
+#pragma endregion

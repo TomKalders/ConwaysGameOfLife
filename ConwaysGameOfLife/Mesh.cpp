@@ -6,10 +6,10 @@
 #include <thread>
 
 //External Headers
-#include <meshoptimizer.h>
 #pragma warning(push)
 #pragma warning(disable:4244)
 #pragma warning(disable:4701)
+//#define OBJL_CONSOLE_OUTPUT
 #include "OBJ_Loader.h"
 #undef OBJL_CONSOLE_OUTPUT
 #pragma warning(pop)
@@ -29,14 +29,14 @@ Mesh::Mesh()
 	, m_WorldMatrix{ glm::mat4{1.f} }
 	, m_SkipOptimization{false}
 	//Data
-	, m_DiastolicInterval{750}
+	, m_DiastolicInterval{200}
 	, m_APThreshold{0}
 	, m_APMinValue(0)
 	, m_APMaxValue(0)
 	, m_APD(0)
 	, m_PathName{}
 {
-	LoadPlotData(1000);
+	LoadPlotData(int(m_DiastolicInterval.count()) + 2);
 }
 
 Mesh::Mesh(ID3D11Device* pDevice, const std::vector<VertexInput>& vertices, const std::vector<uint32_t>& indices)
@@ -207,6 +207,12 @@ void Mesh::SetScale(float x, float y, float z)
 	m_WorldMatrix[2].z = z;
 }
 
+void Mesh::SetDiastolicInterval(float diastolicInterval)
+{
+	m_DiastolicInterval = std::chrono::milliseconds(static_cast<long long>(diastolicInterval));
+	LoadPlotData(int(m_DiastolicInterval.count()));
+}
+
 void Mesh::CreateCachedBinary()
 {
 	size_t pos = m_PathName.find('.');
@@ -281,78 +287,6 @@ void Mesh::LoadCachedNeighbours()
 			}
 		}
 	}
-}
-
-
-//Pulse Simulations
-void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
-{
-	if (m_VerticesToUpdate.empty() && m_NeighboursToUpdate.empty())
-		return;
-
-	//Loop over all the vertices that have a pulse going through and update them
-	//If the pulse zeros out, mark them to remove them from the list.
-	std::vector<VertexInput*> verticesToRemove{};
-	for (VertexInput* vertex : m_VerticesToUpdate)
-	{
-		if (vertex->apVisualization > 0.f)
-			vertex->apVisualization -= deltaTime;
-		else
-		{
-			vertex->apVisualization = 0.f;
-			verticesToRemove.push_back(vertex);
-		}
-	}
-
-	//Remove the vertices with no pulse from the list.
-	for (VertexInput* vertex : verticesToRemove)
-	{
-		m_VerticesToUpdate.erase(vertex);
-	}
-
-	//Clear the vector to be reused and update all the neighbour vertices.
-	verticesToRemove.clear();
-	for (VertexInput* vertex : m_NeighboursToUpdate)
-	{
-		vertex->timeToTravel -= deltaTime;
-		if (vertex->timeToTravel <= 0.f)
-		{
-			verticesToRemove.push_back(vertex);
-			PulseVertex(vertex, pDeviceContext, false);
-		}
-	}
-
-	//Remove the neighbour vertices with from the list.
-	for (VertexInput* vertex : verticesToRemove)
-	{
-		m_NeighboursToUpdate.erase(vertex);
-	}
-
-	UpdateVertexBuffer(pDeviceContext);
-}
-
-void Mesh::PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
-{
-	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
-	{
-		PulseVertex(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
-	}
-}
-
-void Mesh::PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
-{
-	if (vertex)
-	{
-		if (vertex->apVisualization <= 0.3f)
-		{
-			vertex->apVisualization = 1;
-			m_VerticesToUpdate.insert(vertex);
-			PulseNeighbours(*vertex);
-		}
-	}
-
-	if (updateVertexBuffer)
-		UpdateVertexBuffer(pDeviceContext);
 }
 
 void Mesh::UpdateMeshV3(ID3D11DeviceContext* pDeviceContext, float deltaTime)
@@ -443,7 +377,8 @@ void Mesh::PulseVertexV3(VertexInput* vertex, ID3D11DeviceContext* pDeviceContex
 				if (neighbourVertex.state == State::Waiting)
 				{
 					float distance = glm::distance(vertex->position, neighbourVertex.position);
-					neighbourVertex.timeToTravel = distance / neighbourVertex.propogationSpeed;
+					//neighbourVertex.timeToTravel = distance / neighbourVertex.propogationSpeed;
+					neighbourVertex.timeToTravel = distance / m_ConductionVelocity;
 					neighbourVertex.state = State::Receiving;
 				}
 			}
@@ -454,89 +389,11 @@ void Mesh::PulseVertexV3(VertexInput* vertex, ID3D11DeviceContext* pDeviceContex
 		UpdateVertexBuffer(pDeviceContext);
 }
 
-void Mesh::UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime)
-{
-	for (VertexInput& vertex : m_VertexBuffer)
-	{
-		if (vertex.IsPulsed())
-		{
-			vertex.apVisualization -= deltaTime;
-		}
-		else if (IsAnyNeighbourActive(vertex))
-		{
-			bool vertexFound{ false };
-			float closestTime{ FLT_MAX };
-
-			for (uint32_t index : vertex.neighbourIndices)
-			{
-				VertexInput& neighbourVertex = m_VertexBuffer[index];
-				if (neighbourVertex.IsPulsed())
-				{
-					float distance = glm::distance(vertex.position, neighbourVertex.position);
-					float time = distance / neighbourVertex.propogationSpeed;
-					if (time < closestTime)
-					{
-						closestTime = time;
-						vertexFound = true;
-					}
-				}
-			}
-
-			if (vertexFound)
-			{
-				auto it = m_VerticesToUpdateV2.find(&vertex);
-				if (it == m_VerticesToUpdateV2.end())
-					m_VerticesToUpdateV2.insert(std::pair<VertexInput*, float>(&vertex, closestTime));
-			}
-		}
-	}
-
-	std::vector<VertexInput*> verticesToRemove{};
-	for (std::pair<VertexInput* const, float>&  pair : m_VerticesToUpdateV2)
-	{
-		pair.second -= deltaTime;
-
-		if (pair.second <= 0.f)
-		{
-			PulseVertexV2(pair.first, pDeviceContext);
-			verticesToRemove.push_back(pair.first);
-		}
-	}
-
-	for (VertexInput* vertex : verticesToRemove)
-	{
-		m_VerticesToUpdateV2.erase(vertex);
-	}
-}
-
-void Mesh::PulseVertexV2(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
-{
-	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
-	{
-		PulseVertexV2(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
-	}
-}
-
-void Mesh::PulseVertexV2(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
-{
-	if (vertex)
-	{
-		if (!vertex->IsPulsed())
-		{
-			vertex->apVisualization = 1;
-		}
-	}
-
-	if (updateVertexBuffer)
-		UpdateVertexBuffer(pDeviceContext);
-}
-
-
 void Mesh::PulseMesh(ID3D11DeviceContext* pDeviceContext)
 {
 	for (int i{}; i < m_VertexBuffer.size(); i++)
 	{
-		PulseVertex(i, pDeviceContext, false);
+		PulseVertexV3(i, pDeviceContext, false);
 	}
 	UpdateVertexBuffer(pDeviceContext);
 }
@@ -1005,19 +862,6 @@ void Mesh::OptimizeIndexBuffer()
 	std::cout << "--- Finished Optimizing Index Buffer ---\n";
 }
 
-void Mesh::OptimizeIndexBufferLib()
-{
-	std::vector<VertexInput> unindexedVertices{ m_VertexBuffer };
-	unindexedVertices.resize(m_AmountIndices);
-
-	std::vector<unsigned int> remap(m_AmountIndices); // allocate temporary memory for the remap table
-	meshopt_generateVertexRemap(&remap[0], NULL, m_AmountIndices, &unindexedVertices[0], m_AmountIndices, sizeof(VertexInput));
-
-	std::vector<VertexInput> vertices{ m_VertexBuffer.size() };
-	meshopt_remapIndexBuffer(&m_IndexBuffer[0], NULL, m_AmountIndices, &remap[0]);
-	meshopt_remapVertexBuffer(&vertices[0], &unindexedVertices[0], m_AmountIndices, sizeof(VertexInput), &remap[0]);
-}
-
 void Mesh::OptimizeVertexBuffer()
 {
 	std::cout << "Removing Duplicate Indices\n";
@@ -1145,18 +989,6 @@ void Mesh::UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext)
 	pDeviceContext->Unmap(m_pVertexBuffer, 0);
 }
 
-void Mesh::PulseNeighbours(const VertexInput& vertex)
-{
-	for (uint32_t neighbourIndex : vertex.neighbourIndices)
-	{
-		VertexInput& neighbourVertex = m_VertexBuffer[neighbourIndex];
-		float distance = glm::distance(vertex.position, neighbourVertex.position);
-		neighbourVertex.timeToTravel = distance / neighbourVertex.propogationSpeed;
-
-		m_NeighboursToUpdate.insert(&neighbourVertex);
-	}
-}
-
 bool Mesh::IsAnyNeighbourActive(const VertexInput& vertex)
 {
 	for (uint32_t index : vertex.neighbourIndices)
@@ -1171,11 +1003,11 @@ bool Mesh::IsAnyNeighbourActive(const VertexInput& vertex)
 
 void Mesh::LoadPlotData(int nrOfValuesAPD)
 {
-	//function to calculate near values of APD Plot
+	//function to calculate near values of APD(Time) Plot
 	//y = 15.311ln(x) + 219.77
 	//function to calculate ln(x)
 	//ln(x) = log(x) / log(2.71828)
-
+	m_APDPlot.clear();
 	m_APDPlot.resize(nrOfValuesAPD);
 
 	for (int x{}; x < nrOfValuesAPD; x++)
@@ -1197,10 +1029,11 @@ void Mesh::LoadPlotData(int nrOfValuesAPD)
 		m_APD = value1 + t * (value2 - value1);
 	}
 
-	//function to calculate near values of the APD Plot
+	//function to calculate near values of the AP(ms) Plot
 	//y = -0.0005x² - 0.0187x + 32.118
 	m_APThreshold = 0.f;
 
+	m_APPlot.clear();
 	m_APPlot.resize((size_t(m_APD) + size_t(1)));
 
 	float minValue = FLT_MAX;
@@ -1220,9 +1053,178 @@ void Mesh::LoadPlotData(int nrOfValuesAPD)
 
 	m_APMinValue = minValue;
 	m_APMaxValue = maxValue;
+
+	//function to calculate near value of CV(DI)
+	//y = -0.0024x² + 0.6514x + 13.869
+	float DI = float(m_DiastolicInterval.count());
+	m_ConductionVelocity = -0.0024f * powf(DI, 2) + 0.6514f * DI + 13.869f;
 }
 
 void Mesh::CreateEffect(ID3D11Device* pDevice)
 {
 	m_pEffect = new BaseEffect(pDevice, L"Resources/Shader/PosCol.fx");
 }
+
+//Early versions of pulse propogation
+#pragma region OldVersion
+
+//Pulse Simulations
+//void Mesh::UpdateMesh(ID3D11DeviceContext* pDeviceContext, float deltaTime)
+//{
+//	if (m_VerticesToUpdate.empty() && m_NeighboursToUpdate.empty())
+//		return;
+//
+//	//Loop over all the vertices that have a pulse going through and update them
+//	//If the pulse zeros out, mark them to remove them from the list.
+//	std::vector<VertexInput*> verticesToRemove{};
+//	for (VertexInput* vertex : m_VerticesToUpdate)
+//	{
+//		if (vertex->apVisualization > 0.f)
+//			vertex->apVisualization -= deltaTime;
+//		else
+//		{
+//			vertex->apVisualization = 0.f;
+//			verticesToRemove.push_back(vertex);
+//		}
+//	}
+//
+//	//Remove the vertices with no pulse from the list.
+//	for (VertexInput* vertex : verticesToRemove)
+//	{
+//		m_VerticesToUpdate.erase(vertex);
+//	}
+//
+//	//Clear the vector to be reused and update all the neighbour vertices.
+//	verticesToRemove.clear();
+//	for (VertexInput* vertex : m_NeighboursToUpdate)
+//	{
+//		vertex->timeToTravel -= deltaTime;
+//		if (vertex->timeToTravel <= 0.f)
+//		{
+//			verticesToRemove.push_back(vertex);
+//			PulseVertex(vertex, pDeviceContext, false);
+//		}
+//	}
+//
+//	//Remove the neighbour vertices with from the list.
+//	for (VertexInput* vertex : verticesToRemove)
+//	{
+//		m_NeighboursToUpdate.erase(vertex);
+//	}
+//
+//	UpdateVertexBuffer(pDeviceContext);
+//}
+
+//void Mesh::PulseVertex(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+//{
+//	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
+//	{
+//		PulseVertex(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
+//	}
+//}
+//
+//void Mesh::PulseVertex(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+//{
+//	if (vertex)
+//	{
+//		if (vertex->apVisualization <= 0.3f)
+//		{
+//			vertex->apVisualization = 1;
+//			m_VerticesToUpdate.insert(vertex);
+//			PulseNeighbours(*vertex);
+//		}
+//	}
+//
+//	if (updateVertexBuffer)
+//		UpdateVertexBuffer(pDeviceContext);
+//}
+
+//void Mesh::UpdateMeshV2(ID3D11DeviceContext* pDeviceContext, float deltaTime)
+//{
+//	for (VertexInput& vertex : m_VertexBuffer)
+//	{
+//		if (vertex.IsPulsed())
+//		{
+//			vertex.apVisualization -= deltaTime;
+//		}
+//		else if (IsAnyNeighbourActive(vertex))
+//		{
+//			bool vertexFound{ false };
+//			float closestTime{ FLT_MAX };
+//
+//			for (uint32_t index : vertex.neighbourIndices)
+//			{
+//				VertexInput& neighbourVertex = m_VertexBuffer[index];
+//				if (neighbourVertex.IsPulsed())
+//				{
+//					float distance = glm::distance(vertex.position, neighbourVertex.position);
+//					float time = distance / neighbourVertex.propogationSpeed;
+//					if (time < closestTime)
+//					{
+//						closestTime = time;
+//						vertexFound = true;
+//					}
+//				}
+//			}
+//
+//			if (vertexFound)
+//			{
+//				auto it = m_VerticesToUpdateV2.find(&vertex);
+//				if (it == m_VerticesToUpdateV2.end())
+//					m_VerticesToUpdateV2.insert(std::pair<VertexInput*, float>(&vertex, closestTime));
+//			}
+//		}
+//	}
+//
+//	std::vector<VertexInput*> verticesToRemove{};
+//	for (std::pair<VertexInput* const, float>&  pair : m_VerticesToUpdateV2)
+//	{
+//		pair.second -= deltaTime;
+//
+//		if (pair.second <= 0.f)
+//		{
+//			PulseVertexV2(pair.first, pDeviceContext);
+//			verticesToRemove.push_back(pair.first);
+//		}
+//	}
+//
+//	for (VertexInput* vertex : verticesToRemove)
+//	{
+//		m_VerticesToUpdateV2.erase(vertex);
+//	}
+//}
+//
+//void Mesh::PulseVertexV2(uint32_t index, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+//{
+//	if (!m_VertexBuffer.empty() && index >= 0 && index < m_VertexBuffer.size())
+//	{
+//		PulseVertexV2(&m_VertexBuffer[index], pDeviceContext, updateVertexBuffer);
+//	}
+//}
+//
+//void Mesh::PulseVertexV2(VertexInput* vertex, ID3D11DeviceContext* pDeviceContext, bool updateVertexBuffer)
+//{
+//	if (vertex)
+//	{
+//		if (!vertex->IsPulsed())
+//		{
+//			vertex->apVisualization = 1;
+//		}
+//	}
+//
+//	if (updateVertexBuffer)
+//		UpdateVertexBuffer(pDeviceContext);
+//}
+
+//void Mesh::PulseNeighbours(const VertexInput& vertex)
+//{
+//	for (uint32_t neighbourIndex : vertex.neighbourIndices)
+//	{
+//		VertexInput& neighbourVertex = m_VertexBuffer[neighbourIndex];
+//		float distance = glm::distance(vertex.position, neighbourVertex.position);
+//		neighbourVertex.timeToTravel = distance / neighbourVertex.propogationSpeed;
+//
+//		m_NeighboursToUpdate.insert(&neighbourVertex);
+//	}
+//}
+#pragma endregion
