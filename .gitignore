@@ -363,3 +363,6 @@ ConwaysGameOfLife/Resources/Models/HeartSmall.bin
 ConwaysGameOfLife/Resources/Models/HeartMedium.bin
 ConwaysGameOfLife/Resources/Models/HeartLarge.obj.bin
 ConwaysGameOfLife/Resources/HeartSmall.bin
+ConwaysGameOfLife/Resources/Models/HeartMediumVolume.mtl
+ConwaysGameOfLife/Resources/Models/HeartMediumVolume.obj
+ConwaysGameOfLife/Resources/Models/HeartSmallVolume.obj

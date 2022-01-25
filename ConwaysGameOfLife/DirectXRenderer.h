@@ -6,7 +6,8 @@
 //General Includes
 #include <string>
 #include <windows.h>
-#include "functional"
+#include <functional>
+#include <thread>
 
 //SDL2
 #include <SDL.h>
@@ -21,6 +22,19 @@
 #include "imgui.h"
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_dx11.h"
+
+//struct ThreadedMesh
+//{
+//	std::thread thread;
+//	Mesh* mesh;
+//	bool meshCreated;
+//
+//	explicit ThreadedMesh(std::thread& thread, Mesh* outMesh)
+//		: thread{std::move(thread)}
+//		, mesh{outMesh}
+//		, meshCreated(false)
+//	{}
+//};
 
 class DirectXRenderer : public Renderer
 {
@@ -45,11 +59,9 @@ public:
 	ID3D11DeviceContext* const GetDeviceContext() const;
 	const std::vector<Mesh*>& GetMeshes() const;
 
+	void CreateMesh(const std::string& filePath, FileType fileType);
 	void AddMesh(Mesh* pMesh);
 	void RemoveMesh(Mesh* pmesh);
-
-	//Imgui
-	bool UseVersionOne();
 
 private:
 	//----- Handle -----
@@ -89,11 +101,12 @@ private:
 	char* m_Buffer = new char[m_Size]{};
 	int m_Filetype = 0;
 	int m_NrOfThreads = 1;
-	bool m_UseVersionOne;
+	bool m_LoadAsVolumeMesh = false;
 	glm::fvec3 m_CameraPosition;
 	//-------------------
 
 	int m_Index;
+	bool m_LoadingMesh;
 	//Mesh* initialMesh;
 	////std::vector<VertexInput>& m_InitialVertexBuffer;
 	//VertexInput initialVertex;
@@ -105,8 +118,14 @@ private:
 	int m_Width;
 	int m_Height;
 
+	std::vector<std::thread> m_CreationThreads;
 	std::vector<Mesh*> m_pMeshes;
 
 	void RenderMeshes() const;
+	void JoinCreationThreads();
+
+	void ImGuiDrawMatricesHeader() const;
+	void ImGuiDrawMeshData(Mesh* pMesh, bool& updateBuffer);
+	void ImGuiDrawMeshLoadingHeader();
 };
 

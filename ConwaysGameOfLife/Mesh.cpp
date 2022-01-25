@@ -5,6 +5,8 @@
 #include <chrono>
 #include <thread>
 
+#include "Time.h"
+
 //External Headers
 #pragma warning(push)
 #pragma warning(disable:4244)
@@ -26,6 +28,7 @@ Mesh::Mesh()
 	, m_pRasterizerStateSolid{ nullptr }
 	, m_WireFrameEnabled{false}
 	, m_AmountIndices{}
+	, m_FibresLoaded{false}
 	, m_WorldMatrix{ glm::mat4{1.f} }
 	, m_SkipOptimization{false}
 	//Data
@@ -64,6 +67,10 @@ Mesh::Mesh(ID3D11Device* pDevice, const std::string& filepath, bool skipOptimiza
 	case FileType::BIN:
 		LoadMeshFromBIN();
 		break;
+	case FileType::PTS: 
+		LoadMeshFromPTS();
+		break;
+	default: ;
 	}
 
 	CreateDirectXResources(pDevice, m_VertexBuffer, m_IndexBuffer);
@@ -154,11 +161,6 @@ std::vector<VertexInput>& Mesh::GetVertexBufferReference()
 	return m_VertexBuffer;
 }
 
-const std::set<VertexInput*>& Mesh::GetVerticesToUpdate() const
-{
-	return m_VerticesToUpdate;
-}
-
 const std::vector<float>& Mesh::GetAPPlot() const
 {
 	return m_APPlot;
@@ -215,6 +217,7 @@ void Mesh::SetDiastolicInterval(float diastolicInterval)
 
 void Mesh::CreateCachedBinary()
 {
+	std::cout << "\n[Started Writing File To Binary]\n";
 	size_t pos = m_PathName.find('.');
 	std::string path = m_PathName.substr(0, pos);
 	path += ".bin";
@@ -248,51 +251,18 @@ void Mesh::CreateCachedBinary()
 				fileStream.write((const char*)&index, sizeof(uint32_t));
 			}
 		}
+		std::cout << "[Finished Writing File To Binary]\n";
+		std::cout << "File is written as a binary file to increase loading time, type in [meshname].bin and load as mesh BIN\n";
 	}
-}
-
-void Mesh::CreatedChacedNeighbours()
-{
-	std::ofstream fileStream{ m_PathName + ".bin", std::ios::out | std::ios::binary };
-	if (fileStream.is_open())
+	else
 	{
-		for (VertexInput& vertex : m_VertexBuffer)
-		{
-			size_t size = vertex.neighbourIndices.size();
-			fileStream.write((const char*)&size, sizeof(size_t));
-			for (uint32_t index : vertex.neighbourIndices)
-			{
-				fileStream.write((const char*)&index, sizeof(uint32_t));
-			}
-		}
-	}
-}
-
-void Mesh::LoadCachedNeighbours()
-{
-	std::ifstream fileStream{ m_PathName + ".bin", std::ios::in | std::ios::binary };
-	if (fileStream.is_open())
-	{
-		for (VertexInput& vertex : m_VertexBuffer)
-		{
-			size_t size{};
-			fileStream.read((char*)&size, sizeof(size_t));
-			vertex.neighbourIndices.clear();
-
-			for (int i{}; i < size; i++)
-			{
-				uint32_t index{};
-				fileStream.read((char*)&index, sizeof(uint32_t));
-				vertex.neighbourIndices.insert(index);
-			}
-		}
+		std::cout << "[Failed To Write File To Binary]\n";
 	}
 }
 
 void Mesh::UpdateMeshV3(ID3D11DeviceContext* pDeviceContext, float deltaTime)
 {
-	pDeviceContext;
-	deltaTime;
+	TIME();
 
 	float dist = (m_APMaxValue - m_APMinValue);
 	float deltaTimeInMs = deltaTime * 1000.f;
@@ -377,8 +347,16 @@ void Mesh::PulseVertexV3(VertexInput* vertex, ID3D11DeviceContext* pDeviceContex
 				if (neighbourVertex.state == State::Waiting)
 				{
 					float distance = glm::distance(vertex->position, neighbourVertex.position);
-					//neighbourVertex.timeToTravel = distance / neighbourVertex.propogationSpeed;
-					neighbourVertex.timeToTravel = distance / m_ConductionVelocity;
+					float conductionVelocity = m_ConductionVelocity;
+
+					if (m_FibresLoaded)
+					{
+						glm::fvec3 pulseDirection = glm::normalize(vertex->position - neighbourVertex.position);
+						float fibrePerpendicularity = abs(glm::dot(pulseDirection, glm::normalize(vertex->fibreDirection)));
+						conductionVelocity *= fibrePerpendicularity;
+					}
+
+					neighbourVertex.timeToTravel = distance / conductionVelocity;
 					neighbourVertex.state = State::Receiving;
 				}
 			}
@@ -406,10 +384,6 @@ void Mesh::ClearPulse(ID3D11DeviceContext* pDeviceContext)
 		vertex.state = State::Waiting;
 		vertex.timePassed = 0.f;
 	}
-
-	m_VerticesToUpdate.clear();
-	m_VerticesToUpdateV2.clear();
-	m_NeighboursToUpdate.clear();
 
 	UpdateVertexBuffer(pDeviceContext);
 }
@@ -588,8 +562,11 @@ void Mesh::LoadMeshFromOBJ(uint32_t nrOfThreads)
 				std::cout << "--- Finished Calculating Vertex Neighbours ---\n";
 			}
 
-			std::cout << m_VertexBuffer.size() << " Vertices After Optimization\n";
-			std::cout << m_IndexBuffer.size() << " Indices After Optimization\n";
+			CalculateInnerNeighbours();
+
+			std::cout << "\n" << m_VertexBuffer.size() << " Vertices After Optimization\n";
+
+			CreateCachedBinary();
 
 			auto timeEnd = std::chrono::high_resolution_clock::now();
 			auto time = timeEnd - timeStart;
@@ -699,6 +676,49 @@ void Mesh::LoadMeshFromVTK()
 	std::cout << "Finished Calculating Neighbours\n";
 }
 
+void Mesh::LoadMeshFromPTS()
+{
+	std::ifstream vertexStream{ m_PathName };
+	if (vertexStream.is_open())
+	{
+		std::string line{};
+		std::getline(vertexStream, line);
+		size_t vertCount = std::stoi(line);
+		m_VertexBuffer.resize(vertCount);
+
+		int index = 0;
+		while (!vertexStream.eof())
+		{
+			if (index >= vertCount)
+				break;
+
+			VertexInput vertex{};
+			vertex.index = index;
+
+			vertexStream >> vertex.position.x >> vertex.position.y >> vertex.position.z;
+
+			vertex.position /= 1000.f;
+			m_VertexBuffer[index] = vertex;
+			++index;
+		}
+
+		for (int i{}; i < m_VertexBuffer.size(); i++)
+		{
+			m_IndexBuffer.push_back(i);
+		}
+
+		OptimizeIndexBuffer();
+		OptimizeVertexBuffer();
+
+		CreateIndexForVertices();
+
+		CalculateNeighbours();
+		CalculateInnerNeighbours();
+
+		CreateCachedBinary();
+	}
+}
+
 void Mesh::LoadMeshFromBIN()
 {
 	std::ifstream fileStream{ m_PathName, std::ios::in | std::ios::binary };
@@ -739,6 +759,14 @@ void Mesh::LoadMeshFromBIN()
 				vertex.neighbourIndices.insert(neighbourIndex);
 			}
 		}
+
+		CreateIndexForVertices();
+
+		std::string name = "Vertex Buffer " + m_PathName;
+		Logger::Get().LogBuffer<VertexInput>(m_VertexBuffer, name);
+		name = "Index Buffer " + m_PathName;
+		Logger::Get().LogBuffer<uint32_t>(m_IndexBuffer, name);
+		Logger::Get().EndSession();
 
 		std::cout << "index buffer size: " << m_IndexBuffer.size() << std::endl;
 		std::cout << "vertex buffer size: " << m_VertexBuffer.size() << std::endl;
@@ -803,10 +831,10 @@ void Mesh::OptimizeIndexBuffer()
 	for (size_t i{}; i < m_IndexBuffer.size(); i++)
 	{
 
-		if (i % 1000 == 0 && !firstRun)
+		if ((i % 1000 == 0 && !firstRun) || i == m_IndexBuffer.size() - 1)
 		{
 			printf("\33[2K\r");
-			int percentage = int((float(i) / float(m_IndexBuffer.size())) * 100);
+			int percentage = int((float(i) / float(m_IndexBuffer.size() - 1)) * 100);
 			std::cout << i << " / " << m_IndexBuffer.size() << " " << percentage << "%";
 		}
 		uint32_t index = m_IndexBuffer[i];
@@ -948,7 +976,7 @@ void Mesh::CalculateNeighbours(int nrOfThreads)
 	};
 
 	const uint32_t threadCount = nrOfThreads;
-	std::cout << "\n started with " << threadCount << " threads\n";
+	std::cout << "\nStarted with " << threadCount << " thread(s)\n";
 	std::vector<std::thread> threads{};
 
 	const uint32_t diff = uint32_t(m_IndexBuffer.size()) / threadCount;
@@ -981,6 +1009,44 @@ void Mesh::CalculateNeighbours(int nrOfThreads)
 	}
 }
 
+void Mesh::CalculateInnerNeighbours()
+{
+	std::cout << "\n[Started Calculating Inner Neighbours]\n";
+	float margin = -0.8f;
+	float maxDistance = 5.f;
+
+	for (int i{}; i < m_VertexBuffer.size(); i++)
+	{
+		if (i % 1000 == 0 || i == m_VertexBuffer.size() - 1)
+		{
+			printf("\33[2K\r");
+			int percentage = int((float(i) / float(m_VertexBuffer.size() - 1)) * 100);
+			std::cout << i << " / " << m_VertexBuffer.size() << " " << percentage << "%";
+		}
+
+		VertexInput& vertex1 = m_VertexBuffer[i];
+		std::vector<VertexInput>::iterator it = m_VertexBuffer.begin() + (i + 1);
+		while (it != m_VertexBuffer.end())
+		{
+			VertexInput& vertex2 = *it;
+			float dot = glm::dot(vertex1.normal, vertex2.normal);
+			if (dot <= margin)
+			{
+				float distance = glm::distance(vertex1.position, vertex2.position);
+				if (distance <= maxDistance)
+				{
+					vertex1.neighbourIndices.insert(vertex2.index);
+					vertex2.neighbourIndices.insert(vertex1.index);
+				}
+			}
+
+			it++;
+		}
+	}
+
+	std::cout << "\n[Finised Calculating Inner Neighbours]\n";
+}
+
 void Mesh::UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext)
 {
 	D3D11_MAPPED_SUBRESOURCE resource;
@@ -999,6 +1065,14 @@ bool Mesh::IsAnyNeighbourActive(const VertexInput& vertex)
 	}
 
 	return false;
+}
+
+void Mesh::CreateIndexForVertices()
+{
+	for (int i{}; i < m_VertexBuffer.size(); i++)
+	{
+		m_VertexBuffer[i].index = i;
+	}
 }
 
 void Mesh::LoadPlotData(int nrOfValuesAPD)

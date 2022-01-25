@@ -1,0 +1,1 @@
+CPU Type: Intel(R) Core(TM) i5-9600KF CPU @ 3.70GHz

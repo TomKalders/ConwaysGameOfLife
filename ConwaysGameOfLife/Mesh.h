@@ -17,7 +17,8 @@ enum class FileType
 {
 	OBJ,
 	VTK,
-	BIN
+	BIN,
+	PTS
 };
 
 enum class State
@@ -45,10 +46,10 @@ struct VertexInput
 		, apVisualization(0.f)
 		, state{State::Waiting}
 		, index(index)
-		//, propogationSpeed(1.f)
 		, actionPotential{ 0.f }
 		, timePassed(0.f)
 		, timeToTravel(0.f)
+		, fibreDirection{ 0, 0, 0 }
 		, neighbourIndices({})
 	{
 	}
@@ -63,10 +64,10 @@ struct VertexInput
 		, apVisualization{}
 		, state{State::Waiting}
 		, index{}
-		//, propogationSpeed{1.f}
 		, actionPotential{0.f}
 		, timePassed(0.f)
 		, timeToTravel{}
+		, fibreDirection{0, 0, 0}
 		, neighbourIndices{}
 	{
 	}
@@ -79,14 +80,14 @@ struct VertexInput
 	glm::fvec3 tangent;						//World tangent
 	glm::fvec2 uv;							//UV coordinate
 	float apVisualization;					//[0, 1] value to visualize pulse
-
+	
 	//Members not part of input layout
 	State state;							//Current state of the vertex
 	uint32_t index;							//Index of the vertex (used in optimization)
-	//float propogationSpeed;					//Propogation speed of the pulse
 	float actionPotential;					//Current action potential (in mV)
-	float timePassed;						//Float to store passed time in different states
+	float timePassed;						//Time passed in different states
 	float timeToTravel;						//The time before activating this vertex
+	glm::fvec3 fibreDirection;				//The direction of the heart fibre at this point
 	std::set<uint32_t> neighbourIndices;	//The indices of the neighbouring vertices
 
 	//Operator overloading
@@ -127,13 +128,13 @@ public:
 	void PulseMesh(ID3D11DeviceContext* pDeviceContext);
 	void ClearPulse(ID3D11DeviceContext* pDeviceContext);
 	void CalculateNeighbours(int nrOfThreads = 1);
+	void CalculateInnerNeighbours();
 
 	const glm::mat4& GetWorldMatrix() const;
 	const std::vector<uint32_t>& GetIndexBuffer() const;
 	const std::vector<VertexInput>& GetVertexBuffer() const;
 	std::vector<VertexInput>& GetVertexBufferReference();
 
-	const std::set<VertexInput*>& GetVerticesToUpdate() const;
 	const std::vector<float>& GetAPPlot() const;
 	std::chrono::milliseconds GetDiastolicInterval() const;
 	glm::fvec2 GetMinMax() const;
@@ -147,9 +148,6 @@ public:
 	void SetDiastolicInterval(float diastolicInterval);
 
 	void CreateCachedBinary();
-	void CreatedChacedNeighbours();
-	void LoadCachedNeighbours();
-
 private:
 	Mesh();
 
@@ -169,6 +167,7 @@ private:
 	//Initialization of mesh
 	void LoadMeshFromOBJ(uint32_t nrOfThreads = 1);	//Should be put in an AssetLoader Class
 	void LoadMeshFromVTK();							//Should be put in an AssetLoader Class
+	void LoadMeshFromPTS();
 	void LoadMeshFromBIN();							//Should be put in an AssetLoader Class
 	void CalculateTangents();						//Should be put in an AssetLoader Class
 	void OptimizeIndexBuffer();						//Should be put in an AssetLoader Class
@@ -181,13 +180,12 @@ private:
 
 	//Vertex Data
 	bool IsAnyNeighbourActive(const VertexInput& vertex);
+	void CreateIndexForVertices();
 
+	bool m_FibresLoaded;
 	glm::mat4 m_WorldMatrix;
 	std::vector<uint32_t> m_IndexBuffer;
 	std::vector<VertexInput> m_VertexBuffer;
-	std::set<VertexInput*> m_VerticesToUpdate;
-	std::set<VertexInput*> m_NeighboursToUpdate;
-	std::map<VertexInput*, float> m_VerticesToUpdateV2;
 
 	//Plot Data
 	void LoadPlotData(int nrOfValuesAPD);

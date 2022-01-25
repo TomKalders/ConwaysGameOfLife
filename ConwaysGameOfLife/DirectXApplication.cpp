@@ -2,6 +2,7 @@
 #include "DirectXRenderer.h"
 
 #include "SDL.h"
+#include "Time.h"
 
 #include <chrono>
 #include <algorithm>
@@ -12,6 +13,9 @@
 DirectXApplication::DirectXApplication(HINSTANCE hInstance)
 	: Application(new DirectXRenderer{ hInstance, {"Heart Pulse Simulation: DirectX"}, 1820, 960 })
 {
+    Session::Get().BeginSession("Resources/Output/SessionData.json");
+    Logger::Get().BeginSession("Resources/Output/Data2.txt");
+    Logger::Get().LogCPUData();
 }
 
 bool DirectXApplication::Initialize()
@@ -89,18 +93,6 @@ void DirectXApplication::HandleInput()
         {
             ImGui_ImplSDL2_ProcessEvent(&e);
         }
-        //else
-        //{
-        //    switch (e.type)
-        //    {
-        //    case SDL_QUIT:
-        //        //If the close button on the window is hit, exit the application
-        //        DirectXApplication::QuitApplication();
-        //        break;
-        //    default:
-        //        break;
-        //    }
-        //}
 
         if (e.type == SDL_QUIT)
             DirectXApplication::QuitApplication();
@@ -109,6 +101,7 @@ void DirectXApplication::HandleInput()
 
 void DirectXApplication::Update(float deltaTime)
 {
+    TIME();
     const std::vector<Mesh*>& meshes = m_pDirectXRenderer->GetMeshes();
 
     for (Mesh* const mesh : meshes)
@@ -122,6 +115,8 @@ void DirectXApplication::Update(float deltaTime)
 
 void DirectXApplication::Cleanup()
 {
+    Session::Get().EndSession();
+    Logger::Get().EndSession();
 	m_pRenderer->Cleanup();
     delete m_pRenderer;
 }

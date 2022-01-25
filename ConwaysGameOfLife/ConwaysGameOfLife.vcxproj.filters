@@ -90,6 +90,9 @@
     <ClCompile Include="3rdParty\imgui-1.81\backends\imgui_impl_dx11.cpp">
       <Filter>3rdParty\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="Time.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cell.h">
@@ -151,6 +154,9 @@
     </ClInclude>
     <ClInclude Include="OBJ_Loader.h">
       <Filter>3rdParty</Filter>
+    </ClInclude>
+    <ClInclude Include="Time.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

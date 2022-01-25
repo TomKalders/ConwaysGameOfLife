@@ -54,8 +54,8 @@ void CreateApplication(HINSTANCE hInstance)
 	//Backspace:    clear the grid
 
 	//Create an application, you can give it the size of a cell
-	int appNr = GetApplication();
-	//int appNr = 1;
+	//int appNr = GetApplication();
+	int appNr = 1;
 
 	Application* app = nullptr;
 	switch (appNr)
@@ -71,7 +71,6 @@ void CreateApplication(HINSTANCE hInstance)
 		break;
 	}
 
-	
 	//Run the application
 	try
 	{
