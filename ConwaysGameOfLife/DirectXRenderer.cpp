@@ -890,6 +890,10 @@ void DirectXRenderer::ImGuiDrawMeshLoadingHeader()
     {
         CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::PTS);
     }
+    if (ImGui::Button("Load VTK"))
+    {
+        CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::VTK);
+    }
 
     ImGui::Spacing();
     ImGui::Spacing();
