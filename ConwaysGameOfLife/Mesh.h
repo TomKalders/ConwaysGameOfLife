@@ -89,7 +89,7 @@ struct VertexInput
 	float actionPotential;					//Current action potential (in mV)
 	float timePassed;						//Time passed in different states
 	float timeToTravel;						//The time before activating this vertex
-	bool fibreAssigned;
+	bool fibreAssigned;						//A boolean indicating if a fibre was assigned to this vertex
 	glm::fvec3 fibreDirection;				//The direction of the heart fibre at this point
 	std::set<uint32_t> neighbourIndices;	//The indices of the neighbouring vertices
 
