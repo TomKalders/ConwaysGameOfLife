@@ -15,7 +15,7 @@ SDL2Renderer::SDL2Renderer(const std::string& windowName, int width, int height)
 {
 }
 
-bool SDL2Renderer::Initialize(Grid* grid)
+bool SDL2Renderer::Initialize()
 {
 	//Initiliaze SDL & create a window and renderer
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -23,7 +23,7 @@ bool SDL2Renderer::Initialize(Grid* grid)
 	m_Renderer = SDL_CreateRenderer(m_Window, -1, 0);
 
 	//Store the grid to draw later.
-	m_pGrid = grid;
+	//m_pGrid = grid;
 
 	return true;
 }
@@ -54,6 +54,11 @@ int SDL2Renderer::GetWindowWidth() const
 int SDL2Renderer::GetWindowHeight() const
 {
 	return m_Height;
+}
+
+void SDL2Renderer::SetGrid(Grid* pGrid)
+{
+	m_pGrid = pGrid;
 }
 
 void SDL2Renderer::ToggleGrid()

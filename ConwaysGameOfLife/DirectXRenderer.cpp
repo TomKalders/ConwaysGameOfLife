@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <iostream>
+#include "Application.h"
 
 #include "Time.h"
 
@@ -30,14 +31,12 @@ DirectXRenderer::DirectXRenderer(HINSTANCE hInstance, const std::string& windowN
 	, m_CameraPosition()
     , m_Index(0)
 	, m_LoadingMesh(false)
+	, m_Mutex{}
 {
     m_Instance = hInstance;
-
-    if (m_pCamera)
-	    m_CameraPosition = m_pCamera->GetPosition();
 }
 
-bool DirectXRenderer::Initialize(Grid*)
+bool DirectXRenderer::Initialize()
 {
     if (!InitializeSDLWindow())
         return false;
@@ -47,6 +46,16 @@ bool DirectXRenderer::Initialize(Grid*)
 
     if (!InitializeImGui())
         return false;
+
+    if (m_pCamera)
+    {
+        m_CameraPosition = m_pCamera->GetPosition();
+        m_pCamera->SetFar(99999.f);
+    }
+    else
+    {
+        throw std::exception{ "Failed to initialize camera in renderer" };
+    }
 
     return true;
 }
@@ -170,10 +179,6 @@ void DirectXRenderer::ToggleGrid()
 {
 }
 
-HWND DirectXRenderer::GetHandle() const
-{
-	return m_Handle;
-}
 
 PerspectiveCamera* DirectXRenderer::GetCamera() const
 {
@@ -190,12 +195,77 @@ ID3D11DeviceContext* const DirectXRenderer::GetDeviceContext() const
     return m_pDeviceContext;
 }
 
+
+bool DirectXRenderer::IsRunningTest()
+{
+    return m_RunningTest;
+}
+
+void DirectXRenderer::IncreasePulses()
+{
+    ++m_NrOfPules;
+    if (m_NrOfPules >= m_MaxNrOfPules)
+    {
+        m_RunningTest = false;
+        m_NrOfPules = 0;
+        if (m_pMeshes.size() > 0)
+            RemoveMesh(m_pMeshes[0]);
+
+        std::cout << "-- Test Completed --\n";
+        //if (!m_Test1Complete)
+        //{
+        //    std::cout << "Running Test Wihout fibres\n";
+        //    m_Test1Complete = true;
+        //    m_NrOfPules = 0;
+        //    CreateMesh("Resources/Models/HeartSmallVolume.bin", FileType::BIN, false);
+        //}
+        //else if (!m_Test2Complete)
+        //{
+        //    m_Test2Complete = true;
+        //    m_NrOfPules = 0;
+        //    std::cout << "-- Test Completed --\n";
+        //    Application::QuitApplication();
+        //}
+    }
+}
+
+
+const std::vector<Mesh*>& DirectXRenderer::GetMeshes() const
+{
+    return m_pMeshes;
+}
+
+void DirectXRenderer::CreateMesh(const std::string& filePath, FileType fileType, bool useFibres)
+{
+    Mesh* mesh = nullptr;
+    m_LoadingMesh = true;
+    std::thread creationThread{ [this, &mesh, filePath, fileType, useFibres]()
+        {
+            TIME();
+            mesh = new Mesh(m_pDevice, filePath, false, fileType);
+            mesh->UseFibres(useFibres);
+            if (!mesh->GetVertexBuffer().empty())
+            {
+                glm::fvec3 pos = mesh->GetVertexBuffer()[0].position;
+                m_pCamera->Translate(pos);
+            }
+
+            AddMesh(mesh);
+            m_LoadingMesh = false;
+        }
+    };
+    m_CreationThreads.push_back(std::move(creationThread));
+}
+
 void DirectXRenderer::AddMesh(Mesh* pMesh)
 {
     if (pMesh)
     {
         if (!pMesh->GetVertexBuffer().empty())
+        {
+            const std::lock_guard<std::mutex> lock(m_Mutex);
             m_pMeshes.push_back(pMesh);
+        }
         else
             std::cout << "Trying to add mesh without vertices!" << std::endl;
     }
@@ -215,25 +285,6 @@ void DirectXRenderer::RemoveMesh(Mesh* pmesh)
     }
 }
 
-const std::vector<Mesh*>& DirectXRenderer::GetMeshes() const
-{
-    return m_pMeshes;
-}
-
-void DirectXRenderer::CreateMesh(const std::string& filePath, FileType fileType)
-{
-    Mesh* mesh = nullptr;
-    m_LoadingMesh = true;
-    std::thread creationThread{ [this, &mesh, filePath, fileType]()
-		{
-			TIME();
-            mesh = new Mesh(m_pDevice, filePath, false, fileType);
-            AddMesh(mesh);
-            m_LoadingMesh = false;
-		}
-    };
-    m_CreationThreads.push_back(std::move(creationThread));
-}
 
 bool DirectXRenderer::InitializeSDLWindow()
 {
@@ -428,6 +479,11 @@ HRESULT DirectXRenderer::CreateHandle()
     return S_OK;
 }
 
+HWND DirectXRenderer::GetHandle() const
+{
+    return m_Handle;
+}
+
 LRESULT CALLBACK DirectXRenderer::WindowProcedure(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -455,6 +511,7 @@ LRESULT CALLBACK DirectXRenderer::WindowProcedure(HWND hWnd, UINT uMsg, WPARAM w
 
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
+
 
 bool DirectXRenderer::InitializeImGui()
 {
@@ -488,6 +545,9 @@ void DirectXRenderer::RenderImGui()
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Spacing();
+    glm::fvec3 position = m_pCamera->GetPosition();
+    std::string currentPosition = std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z);
+    ImGui::Text(currentPosition.c_str());
     ImGui::InputFloat3("Camera Position", &m_CameraPosition.x);
     if (ImGui::Button("Set Camera Position"))
     {
@@ -641,7 +701,6 @@ void DirectXRenderer::ImGuiDrawMeshData(Mesh* pMesh, bool& updateBuffer)
         std::vector<VertexInput>& vertexBuffer = pMesh->GetVertexBufferReference();
         VertexInput initialVertex = vertexBuffer[m_Index];
 
-
         ImGui::Spacing();
         ImGui::Spacing();
         ImGui::Spacing();
@@ -690,9 +749,17 @@ void DirectXRenderer::ImGuiDrawMeshData(Mesh* pMesh, bool& updateBuffer)
         {
             pMesh->SetScale(scale, scale, scale);
         }
+
+        glm::fvec3 translation = pMesh->GetTranslation();
+        ImGui::InputFloat3("Translation", &translation.x);
+        if (translation != pMesh->GetTranslation())
+        {
+            pMesh->Translate(translation.x, translation.y, translation.z);
+        }
         ImGui::Spacing();
         ImGui::Spacing();
         ImGui::Spacing();
+
         auto vec3ToString = [](const glm::fvec3& vector)
         {
             std::string vecString{};
@@ -733,6 +800,19 @@ void DirectXRenderer::ImGuiDrawMeshData(Mesh* pMesh, bool& updateBuffer)
         ImGui::Text(("Power: " + std::to_string(initialVertex.apVisualization)).c_str());
         ImGui::Text(("Active Potential: " + std::to_string(initialVertex.actionPotential)).c_str());
         ImGui::Text(("Neighbour Indices: " + indicesToString(initialVertex.neighbourIndices)).c_str());
+
+        ImGui::Spacing();
+        ImGui::Text(("Fibre Direction: " + vec3ToString(initialVertex.fibreDirection)).c_str());
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        bool useFibres = pMesh->UseFibres();
+		if (ImGui::Checkbox("Use Fibres", &useFibres))
+		{
+            pMesh->UseFibres(useFibres);
+		}
 
         ImGui::Spacing();
         ImGui::Spacing();
@@ -788,18 +868,14 @@ void DirectXRenderer::ImGuiDrawMeshData(Mesh* pMesh, bool& updateBuffer)
         {
             pMesh->CreateCachedBinary();
         }
-        ImGui::InputInt("Nr of threads", &m_NrOfThreads);
-        if (ImGui::Button("Recalculate Neighbours"))
-        {
-            pMesh->CalculateNeighbours(m_NrOfThreads);
-        }
+
         ImGui::Spacing();
         ImGui::Spacing();
         ImGui::Spacing();
 
-        if (ImGui::Button("Calculate Inner Neighbours"))
+        if (ImGui::Button("Load Cached Fibre Data"))
         {
-            pMesh->CalculateInnerNeighbours();
+            pMesh->LoadCachedFibres();
         }
 
         ImGui::Spacing();
@@ -868,6 +944,14 @@ void DirectXRenderer::ImGuiDrawMeshLoadingHeader()
     {
         CreateMesh("Resources/Models/HeartSmallVolume.bin", FileType::BIN);
     }
+    if (ImGui::Button("Load Coarser Mesh"))
+    {
+        CreateMesh("Resources/Models/CoarserScaled.obj", FileType::OBJ);
+    }
+    if (ImGui::Button("Load Coarser Mesh Binary"))
+    {
+        CreateMesh("Resources/Models/CoarserScaled.bin", FileType::BIN);
+    }
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Spacing();
@@ -886,14 +970,33 @@ void DirectXRenderer::ImGuiDrawMeshLoadingHeader()
     {
         CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::BIN);
     }
-    if (ImGui::Button("Load PTS"))
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::InputInt("Number of repeated puleses", &m_MaxNrOfPules);
+    if (!m_RunningTest && ImGui::Button("Run Test 1"))
     {
-        CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::PTS);
+        std::cout << "-- Started Running Test --\n";
+        m_RunningTest = true;
+        CreateMesh("Resources/Models/CoarserScaled.bin", FileType::BIN);
     }
-    if (ImGui::Button("Load VTK"))
+    if (!m_RunningTest && ImGui::Button("Run Test 2"))
     {
-        CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::VTK);
+        std::cout << "-- Started Running Test --\n";
+        m_RunningTest = true;
+        CreateMesh("Resources/Models/CoarserScaled.bin", FileType::BIN, false);
     }
+    //if (ImGui::Button("Load PTS"))
+    //{
+    //    CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::PTS);
+    //}
+    //if (ImGui::Button("Load VTK"))
+    //{
+    //    CreateMesh("Resources/Models/" + std::string{ m_Buffer }, FileType::VTK);
+    //}
 
     ImGui::Spacing();
     ImGui::Spacing();

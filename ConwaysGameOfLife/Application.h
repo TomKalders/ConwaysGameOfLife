@@ -15,8 +15,6 @@ public:
 	virtual void Run();
 	static void QuitApplication();
 
-
-
 private:
 	virtual bool Initialize() = 0;
 	virtual void PostInitialize() = 0;

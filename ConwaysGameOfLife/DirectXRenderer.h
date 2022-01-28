@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <functional>
 #include <thread>
+#include <mutex>
 
 //SDL2
 #include <SDL.h>
@@ -23,19 +24,6 @@
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_dx11.h"
 
-//struct ThreadedMesh
-//{
-//	std::thread thread;
-//	Mesh* mesh;
-//	bool meshCreated;
-//
-//	explicit ThreadedMesh(std::thread& thread, Mesh* outMesh)
-//		: thread{std::move(thread)}
-//		, mesh{outMesh}
-//		, meshCreated(false)
-//	{}
-//};
-
 class DirectXRenderer : public Renderer
 {
 public:
@@ -46,12 +34,12 @@ public:
 	DirectXRenderer& operator=(DirectXRenderer && other) = delete;
 	virtual ~DirectXRenderer() = default;
 
-	virtual bool Initialize(Grid* grid) override;
+	virtual bool Initialize() override;
 	virtual void Render() override;
 	virtual void Cleanup() override;
 	virtual int GetWindowWidth() const override;
 	virtual int GetWindowHeight() const override;
-	virtual void ToggleGrid() override;
+	virtual void ToggleGrid();
 
 	HWND GetHandle() const;
 	PerspectiveCamera* GetCamera() const;
@@ -59,9 +47,13 @@ public:
 	ID3D11DeviceContext* const GetDeviceContext() const;
 	const std::vector<Mesh*>& GetMeshes() const;
 
-	void CreateMesh(const std::string& filePath, FileType fileType);
+	void CreateMesh(const std::string& filePath, FileType fileType, bool useFibres = true);
 	void AddMesh(Mesh* pMesh);
 	void RemoveMesh(Mesh* pmesh);
+
+	//Runnign Tests
+	bool IsRunningTest();
+	void IncreasePulses();
 
 private:
 	//----- Handle -----
@@ -103,13 +95,19 @@ private:
 	int m_NrOfThreads = 1;
 	bool m_LoadAsVolumeMesh = false;
 	glm::fvec3 m_CameraPosition;
+
+	//Test
+	bool m_RunningTest = false;
+	int m_NrOfPules = 0;
+	int m_MaxNrOfPules = 10;
+
 	//-------------------
 
 	int m_Index;
 	bool m_LoadingMesh;
-	//Mesh* initialMesh;
-	////std::vector<VertexInput>& m_InitialVertexBuffer;
-	//VertexInput initialVertex;
+
+	//Threading
+	std::mutex m_Mutex;
 	
 	PerspectiveCamera* m_pCamera = nullptr;
 	std::string m_WindowTitle;

@@ -7,6 +7,7 @@
 
 #include <intrin.h>
 
+//Session and Timer class provided by Tom Tesch
 //drag the json file to chrome://tracing to visualize
 #define STR(s) #s
 #define XSTR(s) STR(s)
@@ -63,7 +64,6 @@ public:
     }
 
     void LogCPUData();
-    //void LogProgramMemory();
 
     void BeginSession(const std::string& filepath = "measurements.txt");
     void EndSession();

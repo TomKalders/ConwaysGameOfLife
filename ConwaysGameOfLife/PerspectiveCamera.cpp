@@ -118,7 +118,7 @@ void PerspectiveCamera::SetPosition(const glm::fvec3& position)
 {
 	m_LookAt[3].x = position.x;
 	m_LookAt[3].y = position.y;
-	m_LookAt[3].z = -position.z;
+	m_LookAt[3].z = position.z;
 	m_LookAt[3].w = 1;
 }
 

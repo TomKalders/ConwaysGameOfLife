@@ -20,6 +20,8 @@ private:
 	virtual void Update(float deltaTime) override;
 	virtual void Cleanup() override;
 
+	std::string GetCurrentTimeAsString();
+
 	DirectXRenderer* m_pDirectXRenderer = nullptr;
 };
 

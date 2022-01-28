@@ -17,9 +17,9 @@ OpenGLRenderer::OpenGLRenderer(const std::string& windowName, int width, int hei
 {
 }
 
-bool OpenGLRenderer::Initialize(Grid* grid)
+bool OpenGLRenderer::Initialize()
 {
-    m_pGrid = grid;
+    //m_pGrid = grid;
 
     //Initialize the library
     if (!glfwInit())
@@ -78,11 +78,6 @@ int OpenGLRenderer::GetWindowWidth() const
 int OpenGLRenderer::GetWindowHeight() const
 {
     return m_Height;
-}
-
-void OpenGLRenderer::ToggleGrid()
-{
-    m_DrawGrid = !m_DrawGrid;
 }
 
 void OpenGLRenderer::Draw() const

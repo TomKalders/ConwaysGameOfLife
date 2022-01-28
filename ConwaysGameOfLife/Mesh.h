@@ -26,7 +26,7 @@ enum class State
 	Waiting,	//The vertex does not have a pulse running throug it
 	Receiving,	//The vertex has an incoming pulse.
 	APD,		//The vertex is in it's Action Potential Duration(APD)
-	DI,			//The vertex is in it's Diastolic Interval(DI)
+	DI			//The vertex is in it's Diastolic Interval(DI)
 };
 
 struct VertexInput
@@ -49,6 +49,7 @@ struct VertexInput
 		, actionPotential{ 0.f }
 		, timePassed(0.f)
 		, timeToTravel(0.f)
+		, fibreAssigned{ false }
 		, fibreDirection{ 0, 0, 0 }
 		, neighbourIndices({})
 	{
@@ -67,6 +68,7 @@ struct VertexInput
 		, actionPotential{0.f}
 		, timePassed(0.f)
 		, timeToTravel{}
+		, fibreAssigned{ false }
 		, fibreDirection{0, 0, 0}
 		, neighbourIndices{}
 	{
@@ -87,6 +89,7 @@ struct VertexInput
 	float actionPotential;					//Current action potential (in mV)
 	float timePassed;						//Time passed in different states
 	float timeToTravel;						//The time before activating this vertex
+	bool fibreAssigned;
 	glm::fvec3 fibreDirection;				//The direction of the heart fibre at this point
 	std::set<uint32_t> neighbourIndices;	//The indices of the neighbouring vertices
 
@@ -99,11 +102,6 @@ struct VertexInput
 	friend bool operator==(const VertexInput& rhs, const VertexInput& lhs)
 	{
 		return rhs.position == lhs.position;
-	}
-
-	bool IsPulsed()
-	{
-		return apVisualization >= 0.3f;
 	}
 };
 
@@ -139,15 +137,23 @@ public:
 	std::chrono::milliseconds GetDiastolicInterval() const;
 	glm::fvec2 GetMinMax() const;
 	glm::fvec3 GetScale();
+	glm::fvec3 GetTranslation();
 	float GetAPD() const;
+	void UseFibres(bool useFibres);
+	bool UseFibres();
 
 	void SetVertexBuffer(ID3D11DeviceContext* pDeviceContext, const std::vector<VertexInput>& vertexBuffer);
 	void SetWireframe(bool enabled);
 	void SetScale(const glm::fvec3& scale);
 	void SetScale(float x, float y, float z);
+	void Translate(const glm::fvec3& translation);
+	void Translate(float x, float y, float z);
 	void SetDiastolicInterval(float diastolicInterval);
 
 	void CreateCachedBinary();
+	void CreateCachedFibreBinary();
+	void LoadFibreData();							//Should be put in an AssetLoader Class
+	void LoadCachedFibres();
 private:
 	Mesh();
 
@@ -160,6 +166,7 @@ private:
 	ID3D11RasterizerState* m_pRasterizerStateWireframe;
 	ID3D11RasterizerState* m_pRasterizerStateSolid;
 	bool m_WireFrameEnabled;
+	bool m_DrawVertex;
 
 	uint32_t m_AmountIndices;
 	//-------------------
@@ -167,11 +174,12 @@ private:
 	//Initialization of mesh
 	void LoadMeshFromOBJ(uint32_t nrOfThreads = 1);	//Should be put in an AssetLoader Class
 	void LoadMeshFromVTK();							//Should be put in an AssetLoader Class
-	void LoadMeshFromPTS();
+	void LoadMeshFromPTS();							//Should be put in an AssetLoader Class
 	void LoadMeshFromBIN();							//Should be put in an AssetLoader Class
 	void CalculateTangents();						//Should be put in an AssetLoader Class
 	void OptimizeIndexBuffer();						//Should be put in an AssetLoader Class
 	void OptimizeVertexBuffer();					//Should be put in an AssetLoader Class
+
 	bool m_SkipOptimization;						//Should be put in an AssetLoader Class
 
 	void CreateEffect(ID3D11Device* pDevice);
@@ -183,9 +191,11 @@ private:
 	void CreateIndexForVertices();
 
 	bool m_FibresLoaded;
+	bool m_UseFibres;
 	glm::mat4 m_WorldMatrix;
 	std::vector<uint32_t> m_IndexBuffer;
 	std::vector<VertexInput> m_VertexBuffer;
+	std::vector<VertexInput> m_LineBuffer;
 
 	//Plot Data
 	void LoadPlotData(int nrOfValuesAPD);

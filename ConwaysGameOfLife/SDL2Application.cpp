@@ -26,7 +26,10 @@ bool SDL2Application::Initialize()
 {
 	//Create a new grid where the grid full covers the screen with cells
 	m_pGrid = new Grid{ m_pRenderer->GetWindowWidth() / m_CellSize, m_pRenderer->GetWindowHeight() / m_CellSize, m_CellSize };
-	m_pRenderer->Initialize(m_pGrid);
+	m_pRenderer->Initialize();
+
+	m_pSDLRenderer = static_cast<SDL2Renderer*>(m_pRenderer);
+	m_pSDLRenderer->SetGrid(m_pGrid);
 
 	return true;
 }
@@ -195,7 +198,7 @@ void SDL2Application::HandleInput()
 			else if (e.key.keysym.sym == SDLK_KP_ENTER || e.key.keysym.sym == SDLK_RETURN)
 			{
 				//If enter is press, toggle wether the grid is visible or not
-				m_pRenderer->ToggleGrid();
+				m_pSDLRenderer->ToggleGrid();
 			}
 			else if (e.key.keysym.sym == SDLK_BACKSPACE)
 			{

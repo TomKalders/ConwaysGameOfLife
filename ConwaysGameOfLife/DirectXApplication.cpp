@@ -6,6 +6,9 @@
 
 #include <chrono>
 #include <algorithm>
+#include <sstream>
+#include <time.h>
+#include <iomanip>
 //Undifine max macro becuase it interferes with the std::max() algorithm.
 #undef max
 
@@ -13,14 +16,15 @@
 DirectXApplication::DirectXApplication(HINSTANCE hInstance)
 	: Application(new DirectXRenderer{ hInstance, {"Heart Pulse Simulation: DirectX"}, 1820, 960 })
 {
-    Session::Get().BeginSession("Resources/Output/SessionData.json");
-    Logger::Get().BeginSession("Resources/Output/Data2.txt");
+    std::string currentTime = GetCurrentTimeAsString();
+    Session::Get().BeginSession("Resources/Output/SessionData " + currentTime + ".json");
+    Logger::Get().BeginSession("Resources/Output/Data " + currentTime + ".txt");
     Logger::Get().LogCPUData();
 }
 
 bool DirectXApplication::Initialize()
 {
-	if (!m_pRenderer->Initialize(nullptr))
+	if (!m_pRenderer->Initialize())
 		return false;
 
     m_pDirectXRenderer = static_cast<DirectXRenderer*>(m_pRenderer);
@@ -35,7 +39,7 @@ bool DirectXApplication::Initialize()
 void DirectXApplication::PostInitialize()
 {
     PerspectiveCamera* pCamera = m_pDirectXRenderer->GetCamera();
-    pCamera->SetMovementSpeed(2.f);
+    pCamera->SetMovementSpeed(200.f);
 }
 
 void DirectXApplication::HandleInput()
@@ -101,7 +105,22 @@ void DirectXApplication::HandleInput()
 
 void DirectXApplication::Update(float deltaTime)
 {
-    TIME();
+    //TIME();
+    if (m_pDirectXRenderer->IsRunningTest() && !m_pDirectXRenderer->GetMeshes().empty())
+    {
+        Mesh* pMesh = m_pDirectXRenderer->GetMeshes()[0];
+
+        if (pMesh)
+        {
+            VertexInput& vertex = pMesh->GetVertexBufferReference()[0];
+            if (vertex.state == State::Waiting)
+            {
+                pMesh->PulseVertexV3(&vertex, m_pDirectXRenderer->GetDeviceContext(), false);
+                m_pDirectXRenderer->IncreasePulses();
+            }
+        }
+    }
+
     const std::vector<Mesh*>& meshes = m_pDirectXRenderer->GetMeshes();
 
     for (Mesh* const mesh : meshes)
@@ -119,4 +138,16 @@ void DirectXApplication::Cleanup()
     Logger::Get().EndSession();
 	m_pRenderer->Cleanup();
     delete m_pRenderer;
+}
+
+std::string DirectXApplication::GetCurrentTimeAsString()
+{
+	//https://stackoverflow.com/questions/16357999/current-date-and-time-as-string/16358264
+    time_t t = std::time(nullptr);
+    tm tm{};
+    localtime_s(&tm, &t);
+    
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+    return oss.str();
 }

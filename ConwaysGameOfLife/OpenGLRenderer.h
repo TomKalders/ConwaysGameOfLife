@@ -14,14 +14,12 @@ public:
 	OpenGLRenderer& operator=(const OpenGLRenderer & other) = delete;
 	OpenGLRenderer& operator=(OpenGLRenderer && other) = delete;
 
-	virtual bool Initialize(Grid* grid) override;
+	virtual bool Initialize() override;
 	virtual void Render() override;
 	virtual void Cleanup() override;
 
 	virtual int GetWindowWidth() const override;
 	virtual int GetWindowHeight() const override;
-
-	virtual void ToggleGrid() override;
 private:
 	Grid* m_pGrid;
 	GLFWwindow* m_Window;

@@ -6,6 +6,8 @@
 #include <thread>
 
 #include "Time.h"
+//glm/gtc/epsilon.hpp
+
 
 //External Headers
 #pragma warning(push)
@@ -27,6 +29,7 @@ Mesh::Mesh()
 	, m_pRasterizerStateWireframe{ nullptr }
 	, m_pRasterizerStateSolid{ nullptr }
 	, m_WireFrameEnabled{false}
+	, m_DrawVertex(false)
 	, m_AmountIndices{}
 	, m_FibresLoaded{false}
 	, m_WorldMatrix{ glm::mat4{1.f} }
@@ -137,7 +140,15 @@ void Mesh::Render(ID3D11DeviceContext* pDeviceContext, const float* worldViewPro
 	for (UINT p = 0; p < techDesc.Passes; ++p)
 	{
 		m_pEffect->GetTechnique()->GetPassByIndex(p)->Apply(0, pDeviceContext);
-		pDeviceContext->DrawIndexed(m_AmountIndices, 0, 0);
+		if (m_DrawVertex)
+		{
+			pDeviceContext->Draw(uint32_t(m_VertexBuffer.size()), 0);
+		}
+		else
+		{
+			pDeviceContext->DrawIndexed(m_AmountIndices, 0, 0);
+		}
+		
 	}
 }
 
@@ -197,6 +208,11 @@ glm::fvec3 Mesh::GetScale()
 	return glm::fvec3{ m_WorldMatrix[0].x, m_WorldMatrix[1].y , m_WorldMatrix[2].z };
 }
 
+glm::fvec3 Mesh::GetTranslation()
+{
+	return glm::fvec3{ m_WorldMatrix[3].x, m_WorldMatrix[3].y , m_WorldMatrix[3].z };
+}
+
 void Mesh::SetScale(const glm::fvec3& scale)
 {
 	SetScale(scale.x, scale.y, scale.z);
@@ -209,10 +225,32 @@ void Mesh::SetScale(float x, float y, float z)
 	m_WorldMatrix[2].z = z;
 }
 
+void Mesh::Translate(const glm::fvec3& translation)
+{
+	Translate(translation.x, translation.y, translation.z);
+}
+
+void Mesh::Translate(float x, float y, float z)
+{
+	m_WorldMatrix[3].x = x;
+	m_WorldMatrix[3].y = y;
+	m_WorldMatrix[3].z = z;
+}
+
 void Mesh::SetDiastolicInterval(float diastolicInterval)
 {
 	m_DiastolicInterval = std::chrono::milliseconds(static_cast<long long>(diastolicInterval));
 	LoadPlotData(int(m_DiastolicInterval.count()));
+}
+
+void Mesh::UseFibres(bool useFibres)
+{
+	m_UseFibres = useFibres;
+}
+
+bool Mesh::UseFibres()
+{
+	return m_FibresLoaded && m_UseFibres;
 }
 
 void Mesh::CreateCachedBinary()
@@ -252,11 +290,209 @@ void Mesh::CreateCachedBinary()
 			}
 		}
 		std::cout << "[Finished Writing File To Binary]\n";
-		std::cout << "File is written as a binary file to increase loading time, type in [meshname].bin and load as mesh BIN\n";
+		std::cout << "File is written as a binary file in Resources/Models to decrease the loading time, type in [meshname].bin and load mesh as BIN\n";
 	}
 	else
 	{
 		std::cout << "[Failed To Write File To Binary]\n";
+	}
+}
+
+void Mesh::CreateCachedFibreBinary()
+{
+	std::cout << "\n[Started Writing Fibres To Binary]\n";
+	size_t pos = m_PathName.find_last_of('/');
+	std::string path = m_PathName.substr(pos + 1);
+	path = path.substr(0, path.find('.'));
+
+	path = "Resources/FibreData/" + path + ".bin";
+
+	std::ofstream fileStream{ path, std::ios::out | std::ios::binary };
+	if (fileStream.is_open())
+	{
+		const size_t nrOfVertices = m_VertexBuffer.size();
+		fileStream.write((const char*)&nrOfVertices, sizeof(size_t));
+
+		for (const VertexInput& vertex : m_VertexBuffer)
+		{
+			fileStream.write((const char*)&vertex.fibreDirection, sizeof(glm::fvec3));
+		}
+
+		std::cout << "\n[Finished Writing Fibres To Binary]\n";
+	}
+	else
+	{
+		std::cout << "Could not create file at " << path << "\n";
+	}
+}
+
+void Mesh::LoadFibreData()
+{
+	std::cout << "\n[Started Reading Fibre Data]\n";
+
+	size_t pos = m_PathName.find_last_of('/');
+	std::string fibrePath = m_PathName.substr(pos);
+	size_t extension = fibrePath.find('.');
+	fibrePath = fibrePath.substr(0, extension);
+	fibrePath = "Resources/FibreData" + fibrePath + ".txt";
+
+	pos = m_PathName.find('.');
+	std::string ptsPath = m_PathName.substr(0, pos) + ".pts";
+
+	std::ifstream fileStream{ fibrePath, std::ios::in };
+	std::ifstream ptsStream{ ptsPath, std::ios::in };
+
+	if (fileStream.is_open() && ptsStream.is_open())
+	{
+		std::cout << "Loading point data from " << ptsPath << "\n";
+		std::string line{};
+
+		std::getline(ptsStream, line);
+
+		size_t size = std::stoi(line);
+		std::vector<glm::fvec3> points{};
+		std::vector<glm::fvec3> fibres{};
+		points.reserve(size);
+		fibres.reserve(size);
+
+		std::string value{};
+		while (!ptsStream.eof())
+		{
+			std::getline(ptsStream, line);
+			if (line != "")
+			{
+				value = line;
+				size_t spacePos = value.find(' ');
+				float x = std::stof(value.substr(0, spacePos));
+				value.erase(0, spacePos + 1);
+				spacePos = value.find(' ');
+				float y = std::stof(value.substr(0, spacePos));
+				value.erase(0, spacePos + 1);
+				float z = std::stof(value);
+
+				points.push_back(glm::fvec3{ x, y, z });
+			}
+		}
+
+		std::cout << "Loading data from " << fibrePath << "\n";
+
+		value = "";
+		line = "";
+		while (!fileStream.eof())
+		{
+			std::getline(fileStream, line);
+			if (line != "")
+			{
+				//Read in the first three floats if the data
+				value = line;
+				size_t spacePos = value.find(' ');
+				float fx = std::stof(value.substr(0, spacePos));
+				value.erase(0, spacePos + 1);
+				spacePos = value.find(' ');
+				float fy = std::stof(value.substr(0, spacePos));
+				value.erase(0, spacePos + 1);
+				spacePos = value.find(' ');
+				float fz = std::stof(value.substr(0, spacePos));
+
+				fibres.push_back(glm::fvec3{ fx, fy, fz });
+			}
+		}
+
+		//Loop over the pts file and compare the positions in there with the position of all the vertex
+		//We can then assign the correct fiber to that vertex
+		for (int i{}; i < points.size(); i++)
+		{
+			if (i % 100 == 0 || i == points.size() - 1)
+			{
+				printf("\33[2K\r");
+				int percentage = int((float(i) / float(points.size() - 1)) * 100);
+				std::cout << i << " / " << points.size() - 1 << " " << percentage << "%";
+			}
+
+			float epsilon = 0.1f;
+			float epsilonIncrease = 0.5f;
+			float epsilonMax = 10.f;
+
+			const glm::fvec3& point = points[i];
+			std::vector<VertexInput>::iterator it = std::find_if(m_VertexBuffer.begin(), m_VertexBuffer.end(), [point, epsilon](const VertexInput& vertex)
+				{
+					return (!vertex.fibreAssigned && glm::epsilonEqual(point, vertex.position, epsilon).y);
+				}
+			);
+
+			while (it == m_VertexBuffer.end())
+			{
+				epsilon += epsilonIncrease;
+
+				if (epsilon > epsilonMax)
+					break;
+
+				it = std::find_if(m_VertexBuffer.begin(), m_VertexBuffer.end(), [point, epsilon](const VertexInput& vertex)
+					{
+						return (!vertex.fibreAssigned && glm::epsilonEqual(point, vertex.position, epsilon).y);
+					}
+				);
+			}
+
+			while (it != m_VertexBuffer.end())
+			{
+				it->fibreDirection = fibres[i];
+				it->fibreAssigned = true;
+
+				++it;
+				it = std::find_if(it, m_VertexBuffer.end(), [point, epsilon](const VertexInput& vertex)
+					{
+						return (!vertex.fibreAssigned && glm::epsilonEqual(point, vertex.position, epsilon).y);
+					}
+				);
+			}
+		}
+
+		CreateCachedFibreBinary();
+		m_FibresLoaded = true;
+	}
+	else
+	{
+		if (!fileStream.is_open())
+			std::cout << "Could not load fibre data from "<< fibrePath <<"\n";
+
+		if (!ptsStream.is_open())
+			std::cout << "Could not load point data from " << ptsPath << "\n";
+	}
+	std::cout << "\n[Finished Reading Fibre Data]\n";
+}
+
+void Mesh::LoadCachedFibres()
+{
+	size_t pos = m_PathName.find_last_of('/');
+	std::string path = m_PathName.substr(pos + 1);
+	path = path.substr(0, path.find('.'));
+
+	path = "Resources/FibreData/" + path + ".bin";
+
+	std::cout << "\n[Started Reading Binary Fibre Data]\n";
+	std::ifstream fileStream{ path, std::ios::in | std::ios::binary };
+	if (fileStream.is_open())
+	{
+		size_t size{};
+		fileStream.read((char*)&size, sizeof(size_t));
+		for (size_t i{}; i < size; i++)
+		{
+			if (!m_VertexBuffer.empty() && i >=0 && i < m_VertexBuffer.size())
+			{
+				glm::fvec3 fibre{};
+				fileStream.read((char*)&fibre, sizeof(glm::fvec3));
+				m_VertexBuffer[i].fibreDirection = fibre;
+			}
+		}
+
+		std::cout << "\n[Finished Reading Binary Fibre Data]\n";
+		m_FibresLoaded = true;
+	}
+	else
+	{
+		std::cout << "Could not load file at " << path << "\n";
+		LoadFibreData();
 	}
 }
 
@@ -346,17 +582,27 @@ void Mesh::PulseVertexV3(VertexInput* vertex, ID3D11DeviceContext* pDeviceContex
 				VertexInput& neighbourVertex = m_VertexBuffer[index];
 				if (neighbourVertex.state == State::Waiting)
 				{
+					//Potential problem with fibres. c0 is in m/s while the distance is most likely not in meters.
+					//This is likely the cause of it.
 					float distance = glm::distance(vertex->position, neighbourVertex.position);
 					float conductionVelocity = m_ConductionVelocity;
 
-					if (m_FibresLoaded)
+					if (UseFibres())
 					{
-						glm::fvec3 pulseDirection = glm::normalize(vertex->position - neighbourVertex.position);
-						float fibrePerpendicularity = abs(glm::dot(pulseDirection, glm::normalize(vertex->fibreDirection)));
-						conductionVelocity *= fibrePerpendicularity;
+						float d1 = 1; // parallel with fibre
+						float d2 = d1 / 5; // perpendiculat with fibre
+						float c0 = 0.6f; // m/s
+
+						glm::fvec3 pulseDirection = glm::normalize(neighbourVertex.position - vertex->position);
+						float cosAngle = glm::dot(vertex->fibreDirection, pulseDirection);
+
+						float c = c0 * sqrtf(d2 + (d1 - d2) * powf(cosAngle, 2));
+						conductionVelocity = c;
+						//std::cout << c << "\n";
 					}
 
 					neighbourVertex.timeToTravel = distance / conductionVelocity;
+					//neighbourVertex.timeToTravel = conductionVelocity;
 					neighbourVertex.state = State::Receiving;
 				}
 			}
@@ -499,6 +745,7 @@ HRESULT Mesh::CreateDirectXResources(ID3D11Device* pDevice, const std::vector<Ve
 
 void Mesh::LoadMeshFromOBJ(uint32_t nrOfThreads)
 {
+	TIME();
 	auto timeStart = std::chrono::high_resolution_clock::now();
 
 	std::cout << "\n[Started Loading Mesh]\n";
@@ -538,12 +785,12 @@ void Mesh::LoadMeshFromOBJ(uint32_t nrOfThreads)
 			std::cout << m_VertexBuffer.size() << " Vertices Read\n";
 			std::cout << m_IndexBuffer.size() << " Indices Read\n";
 
+			LoadCachedFibres();
+
 			//Remove indices pointing towards duplicate vertices
 			if (!m_SkipOptimization)
 				OptimizeIndexBuffer();
-			//OptimizeIndexBufferLib();
 
-			//Calculate the tangents
 			CalculateTangents();
 
 			//Remove the duplicate vertices from the vertex buffer
@@ -716,11 +963,14 @@ void Mesh::LoadMeshFromPTS()
 		CalculateInnerNeighbours();
 
 		CreateCachedBinary();
+
+		m_DrawVertex = true;
 	}
 }
 
 void Mesh::LoadMeshFromBIN()
 {
+	TIME();
 	std::ifstream fileStream{ m_PathName, std::ios::in | std::ios::binary };
 	if (fileStream.is_open())
 	{
@@ -761,6 +1011,8 @@ void Mesh::LoadMeshFromBIN()
 		}
 
 		CreateIndexForVertices();
+
+		LoadCachedFibres();
 
 		std::string name = "Vertex Buffer " + m_PathName;
 		Logger::Get().LogBuffer<VertexInput>(m_VertexBuffer, name);
@@ -1012,6 +1264,7 @@ void Mesh::CalculateNeighbours(int nrOfThreads)
 void Mesh::CalculateInnerNeighbours()
 {
 	std::cout << "\n[Started Calculating Inner Neighbours]\n";
+	TimePoint start = std::chrono::high_resolution_clock::now();
 	float margin = -0.8f;
 	float maxDistance = 5.f;
 
@@ -1044,27 +1297,20 @@ void Mesh::CalculateInnerNeighbours()
 		}
 	}
 
-	std::cout << "\n[Finised Calculating Inner Neighbours]\n";
+	TimePoint end = std::chrono::high_resolution_clock::now();
+	auto time = end - start;
+	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(time);
+	std::cout << "\nCalculating Inner Neighbours Took " << seconds.count() << " seconds\n";
+	std::cout << "[Finised Calculating Inner Neighbours]\n";
 }
 
 void Mesh::UpdateVertexBuffer(ID3D11DeviceContext* pDeviceContext)
 {
+	//TIME();
 	D3D11_MAPPED_SUBRESOURCE resource;
 	pDeviceContext->Map(m_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
 	memcpy(resource.pData, m_VertexBuffer.data(), m_VertexBuffer.size() * sizeof(VertexInput));
 	pDeviceContext->Unmap(m_pVertexBuffer, 0);
-}
-
-bool Mesh::IsAnyNeighbourActive(const VertexInput& vertex)
-{
-	for (uint32_t index : vertex.neighbourIndices)
-	{
-		VertexInput& neighbourVertex = m_VertexBuffer[index];
-		if (neighbourVertex.IsPulsed())
-			return true;
-	}
-
-	return false;
 }
 
 void Mesh::CreateIndexForVertices()
@@ -1300,5 +1546,17 @@ void Mesh::CreateEffect(ID3D11Device* pDevice)
 //
 //		m_NeighboursToUpdate.insert(&neighbourVertex);
 //	}
+//}
+
+//bool Mesh::IsAnyNeighbourActive(const VertexInput& vertex)
+//{
+//	for (uint32_t index : vertex.neighbourIndices)
+//	{
+//		VertexInput& neighbourVertex = m_VertexBuffer[index];
+//		if (neighbourVertex.IsPulsed())
+//			return true;
+//	}
+//
+//	return false;
 //}
 #pragma endregion

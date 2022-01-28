@@ -16,13 +16,15 @@ public:
 	SDL2Renderer& operator=(const SDL2Renderer & other) = delete;
 	SDL2Renderer& operator=(SDL2Renderer && other) = delete;
 
-	virtual bool Initialize(Grid* grid) override;
+	virtual bool Initialize() override;
 	virtual void Render() override;
 	virtual void Cleanup() override;
 	virtual int GetWindowWidth() const override;
 	virtual int GetWindowHeight() const override;
 
-	void ToggleGrid() override;
+	void SetGrid(Grid* pGrid);
+	void ToggleGrid();
+	
 private:
 	Grid* m_pGrid;
 	SDL_Window* m_Window;

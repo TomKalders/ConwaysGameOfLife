@@ -5,6 +5,7 @@
 #include "Application.h"
 
 class Renderer;
+class SDL2Renderer;
 class Grid;
 struct GLFWwindow;
 
@@ -28,6 +29,8 @@ private:
 	float m_TickDelayIncrease;
 	bool m_RunningSimulation;
 	static bool m_IsRunning;
+
+	SDL2Renderer* m_pSDLRenderer;
 
 	virtual bool Initialize() override;
 	virtual void PostInitialize() override;
